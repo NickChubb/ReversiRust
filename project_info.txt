@@ -1,0 +1,8 @@
+Faraz Borghei 
+Nicholas Chubb - 301287896
+
+Project: Reversi with Monte-Carlo Search Tree
+
+Programming Language: Rust
+Libraries: ...
+
