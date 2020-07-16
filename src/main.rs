@@ -26,33 +26,41 @@ impl Board {
             width: w,
             height: h,
             board_size: size,
-            board: vec![0; size.into()] //must convert u8 size -> usize type
+            board: vec![0; (size - 1).into()] //must convert u8 type -> usize type
         }
     }
 
     fn print(&mut self) {
-        for i in 0..self.height.into() {
-            println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", 
-            self.board.get((i * 8) + 0),
-            self.board.get((i * 8) + 1),
-            self.board.get((i * 8) + 2),
-            self.board.get((i * 8) + 3),
-            self.board.get((i * 8) + 4),
-            self.board.get((i * 8) + 5),
-            self.board.get((i * 8) + 6),
-            self.board.get((i * 8) + 7));
+        // Super hacky, find nicer way to do this
+        let mut count = 0;
+        for i in self.board.iter(){
+            if count % self.width == 0 {
+                print!("\n");
+            }
+            print!("{} ", i);
+            count += 1;
         }
     }
 
     fn ins(&mut self, pos: usize, val: u8) {
         self.board.insert(pos, val)
     }
+
+    fn flip(&mut self, pos: usize) {
+        if self.board[pos] == 1 {
+            self.board.insert(pos, 2)
+        }else if self.board[pos] == 2 {
+            self.board.insert(pos, 1)
+        }
+    }
+
+
 }
 
 /**
  * Recursively solves a puzzle by MCTS
  */
-fn monte_carlo_tree_search(board: &Vec<u8>, action: u8) {
+fn monte_carlo_tree_search(board: Board, action: u8) {
 
 }
 
