@@ -17,6 +17,9 @@ struct Board {
     board: Vec<u8>
 }
 
+/**
+ * Board object functions
+ */
 impl Board {
 
     fn new(w: u8, h: u8) -> Board {
@@ -61,6 +64,9 @@ impl Board {
     }
 }
 
+/**
+ * Convert 2d string index to vector index
+ */
 fn convert_2d(s: &str) -> usize{
     // pattern match a - h, 1- 8
     // ()
