@@ -46,6 +46,10 @@ impl Board {
         self.board.insert(pos, val)
     }
 
+    fn remove(&mut self, pos: usize){
+        self.board.insert(pos, 0)
+    }
+
     fn flip(&mut self, pos: usize) {
         if self.board[pos] == 1 {
             self.board.insert(pos, 2)
@@ -53,7 +57,6 @@ impl Board {
             self.board.insert(pos, 1)
         }
     }
-
 
 }
 
