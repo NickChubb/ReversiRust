@@ -1,20 +1,16 @@
 use std::io;
-//use rand::Rng;
+use rand::Rng;
 use regex::Regex;
-
-/* TO DISPLAY PRINT PROPERLY IMPLEMENT LATER
-impl<T> std::fmt::Display for Vec<T> {
-    fn fmt(&self, _: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        Ok(())
-    }
-}
-*/
+// Provides an indexed HashSet to allow returning element by index
+// Used for getting random items from set in O(1) time so MCTS is more efficient
+use indexmap::IndexSet;  
 
 struct Board {
     width: u8,
     height: u8,
     board_size: u8,
-    board: Vec<u8>
+    board: Vec<u8>,
+    available_actions: IndexSet<u8>
 }
 
 /**
@@ -25,12 +21,17 @@ impl Board {
     fn new(w: u8, h: u8) -> Board {
 
         let size = w * h;
+        let mut actions: IndexSet<u8> = IndexSet::new();
+        for i in 0..size {
+            actions.insert(i);
+        }
 
         Board {
             width: w,
             height: h,
             board_size: size,
-            board: vec![0; (size).into()] //must convert u8 type -> usize type
+            board: vec![0; (size).into()], //must convert u8 type -> usize type
+            available_actions: actions
         }
     }
 
@@ -49,14 +50,15 @@ impl Board {
                 }
             }
             print!("{} ", i);
-            count += 1;
+            count += 1; 
         }
         print!("  8\n\n");
     }
 
     fn ins(&mut self, pos: u8, val: u8) {
-        let pos: usize = pos.into();
-        self.board.splice(pos..pos+1, [val].iter().cloned());
+        let pos_u: usize = pos.into();
+        self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
+        self.available_actions.remove(&pos);
     }
 
     fn rm(&mut self, pos: usize){
@@ -114,7 +116,17 @@ fn convert_2d(s: &str) -> u8{
 /**
  * Recursively solves a puzzle by MCTS
  */
-fn monte_carlo_tree_search(board: Board, action: u8) {
+fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
+
+    let size: u8 = b.board_size;
+
+    let actions_size = b.available_actions.len();
+
+    for i in 0..max_steps {
+        let rand_index = rand::thread_rng().gen_range(0, actions_size);
+        let rand_val = b.available_actions.get_index(rand_index);
+        println!("{:?}", rand_val);
+    }
 
 }
 
@@ -122,10 +134,14 @@ fn main() {
     
     println!("Welcome to MCTS Reversi Solver!");
 
+    const MAX_STEPS: usize = 100;
+
     let width = 8;
     let height = 8;
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
+
+    const TIME: usize = 5;
 
     loop{
 
@@ -144,8 +160,9 @@ fn main() {
 
         board.ins(res, 1);
 
+        //monte_carlo_tree_search(board, MAX_STEPS, TIME);
 
-
+        
 
     }
 
