@@ -36,18 +36,26 @@ impl Board {
 
     fn print(&mut self) {
         // Super hacky, find nicer way to do this
+        // Add bold and coloring with: https://docs.rs/ansi_term/0.12.1/ansi_term/
+        println!("\n     A B C D E F G H\n");
+
         let mut count = 0;
         for i in self.board.iter(){
             if count % self.width == 0 {
-                print!("\n");
+                if count != 0 {
+                    print!("  {}\n     ", (count / 8));
+                }else{
+                    print!("     ")
+                }
             }
             print!("{} ", i);
             count += 1;
         }
-        println!();
+        print!("  8\n\n");
     }
 
-    fn ins(&mut self, pos: usize, val: u8) {
+    fn ins(&mut self, pos: u8, val: u8) {
+        let pos: usize = pos.into();
         self.board.splice(pos..pos+1, [val].iter().cloned());
     }
 
@@ -67,14 +75,14 @@ impl Board {
 /**
  * Convert 2d string index to vector index
  */
-fn convert_2d(s: &str) -> usize{
+fn convert_2d(s: &str) -> u8{
     // pattern match a - h, 1- 8
     // ()
 
     let letter = s.chars().next().unwrap().to_ascii_lowercase();
     let num = s.chars().nth(1).unwrap();
 
-    let col: usize = match letter {
+    let col: u8 = match letter {
         'a' => 0,
         'b' => 1,
         'c' => 2,
@@ -87,7 +95,7 @@ fn convert_2d(s: &str) -> usize{
     };
 
     // Probably better way to do this.... but I couldn't find it
-    let row: usize = match num {
+    let row: u8 = match num {
         '1' => 0,
         '2' => 1,
         '3' => 2,
@@ -129,12 +137,14 @@ fn main() {
 
         io::stdin().read_line(&mut input).expect("Failed to read line");
 
-        let res: usize = match re.is_match(&input) {
+        let res: u8 = match re.is_match(&input) {
             true => convert_2d(&input),
             false => {println!("ERROR: invalid input"); continue},
         };
 
         board.ins(res, 1);
+
+
 
 
     }
