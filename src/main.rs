@@ -83,7 +83,13 @@ impl Board {
  * @params:     s: &str - len 2 string of char A-H followed by int 1-8
  * @returns:    u8 position in 1d Vec
  */
+<<<<<<< HEAD
+fn convert_2d(s: &str) -> u8 {
+    // pattern match a - h, 1- 8
+    // ()
+=======
 fn convert_2d(s: &str) -> u8{
+>>>>>>> e713e1319daf6da77f1560a9819c01ef84469aae
 
     //Handle panic
     let letter = s.chars().next().unwrap().to_ascii_lowercase();
