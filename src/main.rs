@@ -5,7 +5,7 @@ use regex::Regex;
 // IndexSet provides an indexed HashSet to allow returning element by index
 // Used for getting random items from set in O(1) time so MCTS is more efficient
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
-use indexmap::IndexSet;  
+use indexmap::IndexSet;
 
 struct Board {
     width: u8,
@@ -85,6 +85,7 @@ impl Board {
  */
 fn convert_2d(s: &str) -> u8{
 
+    //Handle panic
     let letter = s.chars().next().unwrap().to_ascii_lowercase();
     let num = s.chars().nth(1).unwrap();
 
@@ -97,7 +98,7 @@ fn convert_2d(s: &str) -> u8{
         'f' => 5,
         'g' => 6,
         'h' => 7,
-        _ => 42
+        _   => 42
     };
 
     // Probably better way to do this.... but I couldn't find it
@@ -110,11 +111,10 @@ fn convert_2d(s: &str) -> u8{
         '6' => 5,
         '7' => 6,
         '8' => 7,
-        _ => 42
+        _   => 42
     };
 
     row * 8 + col
-    
 }
 
 /**
