@@ -77,7 +77,7 @@ impl Board {
 /**
  * Convert 2d string index to vector index
  */
-fn convert_2d(s: &str) -> u8{
+fn convert_2d(s: &str) -> u8 {
     // pattern match a - h, 1- 8
     // ()
 
