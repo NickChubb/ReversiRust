@@ -1,8 +1,10 @@
 use std::io;
 use rand::Rng;
 use regex::Regex;
-// Provides an indexed HashSet to allow returning element by index
+
+// IndexSet provides an indexed HashSet to allow returning element by index
 // Used for getting random items from set in O(1) time so MCTS is more efficient
+// Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;  
 
 struct Board {
@@ -61,8 +63,10 @@ impl Board {
         self.available_actions.remove(&pos);
     }
 
-    fn rm(&mut self, pos: usize){
-        self.board.insert(pos, 0)
+    fn rm(&mut self, pos: u8){
+        let pos_u: usize = pos.into();
+        self.board.insert(pos_u, 0);
+        self.available_actions.insert(pos);
     }
 
     fn flip(&mut self, pos: usize) {
@@ -76,10 +80,16 @@ impl Board {
 
 /**
  * Convert 2d string index to vector index
+ * @params:     s: &str - len 2 string of char A-H followed by int 1-8
+ * @returns:    u8 position in 1d Vec
  */
+<<<<<<< HEAD
 fn convert_2d(s: &str) -> u8 {
     // pattern match a - h, 1- 8
     // ()
+=======
+fn convert_2d(s: &str) -> u8{
+>>>>>>> e713e1319daf6da77f1560a9819c01ef84469aae
 
     let letter = s.chars().next().unwrap().to_ascii_lowercase();
     let num = s.chars().nth(1).unwrap();
@@ -118,14 +128,16 @@ fn convert_2d(s: &str) -> u8 {
  */
 fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
 
-    let size: u8 = b.board_size;
-
     let actions_size = b.available_actions.len();
 
     for i in 0..max_steps {
+
         let rand_index = rand::thread_rng().gen_range(0, actions_size);
         let rand_val = b.available_actions.get_index(rand_index);
-        println!("{:?}", rand_val);
+        
+        
+
+        //monte_carlo_tree_search(b, max_steps, timer)
     }
 
 }
@@ -135,13 +147,12 @@ fn main() {
     println!("Welcome to MCTS Reversi Solver!");
 
     const MAX_STEPS: usize = 100;
+    const TIME: usize = 5;
 
     let width = 8;
     let height = 8;
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
-
-    const TIME: usize = 5;
 
     loop{
 
@@ -150,7 +161,6 @@ fn main() {
         println!("Place piece at position: ");
 
         let mut input = String::new();
-
         io::stdin().read_line(&mut input).expect("Failed to read line");
 
         let res: u8 = match re.is_match(&input) {
@@ -161,8 +171,6 @@ fn main() {
         board.ins(res, 1);
 
         //monte_carlo_tree_search(board, MAX_STEPS, TIME);
-
-        
 
     }
 
