@@ -16,7 +16,8 @@ struct Board {
     height: u8,
     board_size: u8,
     board: Vec<u8>,
-    available_actions: IndexSet<u8>,
+    player_available_actions: IndexSet<u8>,
+    cpu_available_actions: IndexSet<u8>,
     player_turn: bool
 }
 
@@ -28,29 +29,34 @@ impl Board {
     fn new(w: u8, h: u8) -> Board {
 
         let size = w * h;
-        let mut actions: IndexSet<u8> = IndexSet::new();
-        for i in 0..size {
-            actions.insert(i);
-        }
-
+        let mut player_actions: IndexSet<u8> = IndexSet::new();
+        let mut cpu_actions: IndexSet<u8> = IndexSet::new();
         let mut new_board = vec![0; (size).into()];
-        new_board[27] = 1;
-        new_board[28] = 2;
-        new_board[35] = 2;
-        new_board[36] = 1;
+
+        new_board[27] = 2;
+        new_board[28] = 1;
+        new_board[35] = 1;
+        new_board[36] = 2;
+
+        player_actions.insert(26);
+        player_actions.insert(19);
+        player_actions.insert(37);
+        player_actions.insert(44);
+
 
         Board {
             width: w,
             height: h,
             board_size: size,
             board: new_board, //must convert u8 type -> usize type
-            available_actions: actions,
+            player_available_actions: player_actions,
+            cpu_available_actions: cpu_actions,
             player_turn: true
         }
     }
 
     fn print(&mut self) {
-        // Super hacky, find nicer way to do this
+
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
         let mut count = 0;
@@ -68,7 +74,11 @@ impl Board {
             } else if i == &2 {
                 print!("{} ", Green.paint("●"));
             } else {
-                print!("- ");
+                if self.player_available_actions.contains(&count) {
+                    print!("{} ", Style::default().bold().paint("-"));
+                } else {
+                    print!("- ");
+                }
             }
             count += 1; 
         }
@@ -77,26 +87,36 @@ impl Board {
 
     fn ins(&mut self, pos: u8, val: u8) {
 
+        // add to board
+        let pos_u: usize = pos.into();
+        self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
+        self.player_available_actions.remove(&pos);
+
+        // flip
+
+        // update available actions
+
+        
         // alternate turns
         if self.player_turn {
             self.player_turn = false
         }else {
             self.player_turn = true
         }
+    }
 
-        // add to board
-        let pos_u: usize = pos.into();
-        self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
-        self.available_actions.remove(&pos);
-
-        // flip
-
+    fn get_available_actions(&mut self) -> &IndexSet<u8> {
+        if self.player_turn {
+            return &self.player_available_actions;
+        } else {
+            return &self.cpu_available_actions;
+        }
     }
 
     fn rm(&mut self, pos: u8){
         let pos_u: usize = pos.into();
         self.board.insert(pos_u, 0);
-        self.available_actions.insert(pos);
+        self.player_available_actions.insert(pos);
     }
 
     fn flip(&mut self, pos: usize) {
@@ -152,12 +172,12 @@ fn convert_2d(s: &str) -> u8{
  */
 fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
 
-    let actions_size = b.available_actions.len();
+    let actions_size = b.player_available_actions.len();
 
     for i in 0..max_steps {
 
         let rand_index = rand::thread_rng().gen_range(0, actions_size);
-        let rand_val = b.available_actions.get_index(rand_index);
+        let rand_val = b.player_available_actions.get_index(rand_index);
         
         
 
