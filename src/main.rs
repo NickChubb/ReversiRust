@@ -7,6 +7,10 @@ use regex::Regex;
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
 
+// Pretty board styling
+use ansi_term::Color::{Red, Green};
+use ansi_term::Style;
+
 struct Board {
     width: u8,
     height: u8,
@@ -47,22 +51,28 @@ impl Board {
 
     fn print(&mut self) {
         // Super hacky, find nicer way to do this
-        // Add bold and coloring with: https://docs.rs/ansi_term/0.12.1/ansi_term/
-        println!("\n     A B C D E F G H\n");
+        println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
         let mut count = 0;
         for i in self.board.iter(){
             if count % self.width == 0 {
                 if count != 0 {
-                    print!("  {}\n     ", (count / 8));
-                }else{
+                    let row_num: u8 = count / 8;
+                    print!("{}\n     ", Style::default().bold().paint(row_num.to_string()));
+                }else{  
                     print!("     ")
                 }
             }
-            print!("{} ", i);
+            if i == &1 {
+                print!("{} ", Red.paint("●"));
+            } else if i == &2 {
+                print!("{} ", Green.paint("●"));
+            } else {
+                print!("- ");
+            }
             count += 1; 
         }
-        print!("  8\n\n");
+        print!("{}\n\n", Style::default().bold().paint("8"));
     }
 
     fn ins(&mut self, pos: u8, val: u8) {
