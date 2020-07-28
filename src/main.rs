@@ -12,7 +12,8 @@ struct Board {
     height: u8,
     board_size: u8,
     board: Vec<u8>,
-    available_actions: IndexSet<u8>
+    available_actions: IndexSet<u8>,
+    player_turn: bool
 }
 
 /**
@@ -28,12 +29,19 @@ impl Board {
             actions.insert(i);
         }
 
+        let mut new_board = vec![0; (size).into()];
+        new_board[27] = 1;
+        new_board[28] = 2;
+        new_board[35] = 2;
+        new_board[36] = 1;
+
         Board {
             width: w,
             height: h,
             board_size: size,
-            board: vec![0; (size).into()], //must convert u8 type -> usize type
-            available_actions: actions
+            board: new_board, //must convert u8 type -> usize type
+            available_actions: actions,
+            player_turn: true
         }
     }
 
@@ -58,9 +66,21 @@ impl Board {
     }
 
     fn ins(&mut self, pos: u8, val: u8) {
+
+        // alternate turns
+        if self.player_turn {
+            self.player_turn = false
+        }else {
+            self.player_turn = true
+        }
+
+        // add to board
         let pos_u: usize = pos.into();
         self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
         self.available_actions.remove(&pos);
+
+        // flip
+
     }
 
     fn rm(&mut self, pos: u8){
@@ -83,13 +103,7 @@ impl Board {
  * @params:     s: &str - len 2 string of char A-H followed by int 1-8
  * @returns:    u8 position in 1d Vec
  */
-<<<<<<< HEAD
-fn convert_2d(s: &str) -> u8 {
-    // pattern match a - h, 1- 8
-    // ()
-=======
 fn convert_2d(s: &str) -> u8{
->>>>>>> e713e1319daf6da77f1560a9819c01ef84469aae
 
     //Handle panic
     let letter = s.chars().next().unwrap().to_ascii_lowercase();
