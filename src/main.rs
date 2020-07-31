@@ -90,13 +90,61 @@ impl Board {
         // add to board
         let pos_u: usize = pos.into();
         self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
-        self.player_available_actions.remove(&pos);
 
-        // flip
+        // flip row
+        let mut u: usize = 1;
+        while ((pos_u + u) % 8) != 0 {
+            let res = self.board.get(pos_u + u).unwrap();
+            self.board.splice(pos_u+u..pos_u+u+1, [1].iter().cloned());
+            /*
+            if  res == &2 {
+                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+            }
+            */
+            u += 1;
+        }
+
+        u = 1;
+        while ((pos_u - u) % 8) != 7 {
+            let res = self.board.get(pos_u - u).unwrap();
+            self.board.splice(pos_u-u..pos_u-u+1, [1].iter().cloned());
+            /*
+            if  res == &2 {
+                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+            }
+            */
+            u += 1;
+        } 
+
+        // Iterate down
+        u = 1;
+        while (pos_u + (u * 8)) <= 63 {
+            let res = self.board.get(pos_u + u).unwrap();
+            self.board.splice(pos_u + (u * 8)..pos_u + (u * 8) + 1, [1].iter().cloned());
+            /*
+            if  res == &2 {
+                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+            }
+            */
+            u += 1;
+        }
+
+        // Iterate up
+        u = 1;
+        loop {
+            let new_pos = match pos_u.checked_sub(u * 8) {
+                None => break,
+                Some(x) => Some(x).unwrap()
+            };
+            self.board.add(new_pos, add);
+            u += 1;
+        }
+
+        // flip adjacent
 
         // update available actions
+        self.player_available_actions.remove(&pos);
 
-        
         // alternate turns
         if self.player_turn {
             self.player_turn = false
@@ -111,6 +159,10 @@ impl Board {
         } else {
             return &self.cpu_available_actions;
         }
+    }
+
+    fn add(&mut self, pos: u8, val: u8){
+        self.board.splice(pos..(pos + 1), [val].iter().cloned());
     }
 
     fn rm(&mut self, pos: u8){
