@@ -91,44 +91,74 @@ impl Board {
         let pos_u: usize = pos.into();
         self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
 
-        // flip row
         let mut u: usize = 1;
-        while ((pos_u + u) % 8) != 0 {
-            let res = self.board.get(pos_u + u).unwrap();
-            self.board.splice(pos_u+u..pos_u+u+1, [1].iter().cloned());
-            /*
-            if  res == &2 {
-                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+        let mut tiles = Vec::new();
+        
+        // Iterate right
+        loop {
+            let position = (pos_u + u);
+            let new_pos = match position % 8 {
+                0 => break,
+                _ => position
+            };
+            let tile = self.board.get(new_pos).unwrap();
+            if tile == &2 {
+                tiles.push(new_pos);
+            } else if tile == &1 {
+                for t in &tiles {
+                    self.add(*t, 1);
+                }
+            } else {
+                tiles.clear();
+                break;
             }
-            */
             u += 1;
         }
 
+        // Iterate left
         u = 1;
-        while ((pos_u - u) % 8) != 7 {
-            let res = self.board.get(pos_u - u).unwrap();
-            self.board.splice(pos_u-u..pos_u-u+1, [1].iter().cloned());
-            /*
-            if  res == &2 {
-                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+        loop {
+            let position = (pos_u - u);
+            let new_pos = match position % 8 {
+                7 => break,
+                _ => position
+            };
+            let tile = self.board.get(new_pos).unwrap();
+            if tile == &2 {
+                tiles.push(new_pos);
+            } else if tile == &1 {
+                for t in &tiles {
+                    self.add(*t, 1);
+                }
+            } else {
+                tiles.clear();
+                break;
             }
-            */
             u += 1;
-        } 
+        }
 
         // Iterate down
         u = 1;
-        while (pos_u + (u * 8)) <= 63 {
-            let res = self.board.get(pos_u + u).unwrap();
-            self.board.splice(pos_u + (u * 8)..pos_u + (u * 8) + 1, [1].iter().cloned());
-            /*
-            if  res == &2 {
-                self.board.splice(pos_u+i..pos_u+i+1, [1].iter().cloned());
+        loop {
+            let position = pos_u + (u * 8);
+            let new_pos = match position < self.board_size.into() {
+                false => break,
+                true => position
+            };
+            let tile = self.board.get(new_pos).unwrap();
+            if tile == &2 {
+                tiles.push(new_pos);
+            } else if tile == &1 {
+                for t in &tiles {
+                    self.add(*t, 1);
+                }
+            } else {
+                tiles.clear();
+                break;
             }
-            */
             u += 1;
         }
-
+        
         // Iterate up
         u = 1;
         loop {
@@ -136,11 +166,22 @@ impl Board {
                 None => break,
                 Some(x) => Some(x).unwrap()
             };
-            self.board.add(new_pos, add);
+            let tile = self.board.get(new_pos).unwrap();
+            if tile == &2 {
+                tiles.push(new_pos);
+            } else if tile == &1 {
+                for t in &tiles {
+                    self.add(*t, 1);
+                }
+            } else {
+                tiles.clear();
+                break;
+            }
             u += 1;
         }
 
-        // flip adjacent
+        // flip diagonal
+        
 
         // update available actions
         self.player_available_actions.remove(&pos);
@@ -161,7 +202,7 @@ impl Board {
         }
     }
 
-    fn add(&mut self, pos: u8, val: u8){
+    fn add(&mut self, pos: usize, val: u8){
         self.board.splice(pos..(pos + 1), [val].iter().cloned());
     }
 
@@ -170,7 +211,7 @@ impl Board {
         self.board.insert(pos_u, 0);
         self.player_available_actions.insert(pos);
     }
-
+    /*
     fn flip(&mut self, pos: usize) {
         if self.board[pos] == 1 {
             self.board.insert(pos, 2)
@@ -178,6 +219,7 @@ impl Board {
             self.board.insert(pos, 1)
         }
     }
+    */
 }
 
 /**
