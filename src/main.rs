@@ -88,7 +88,14 @@ impl Board {
     fn ins(&mut self, pos: u8, val: u8) {
 
         // add to board
-        let pos_u: usize = pos.into();
+        let pos_u: usize = match self.get_available_actions().contains(&pos) {
+            false => {
+                println!("ERROR: not a valid action");
+                return;
+            },
+            true => pos.into()
+        };
+
         self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
 
         let mut u: usize = 1;
@@ -102,9 +109,9 @@ impl Board {
                 _ => position
             };
             let tile = self.board.get(new_pos).unwrap();
-            if tile == &2 {
+            if tile != &val && tile != &0 {
                 tiles.push(new_pos);
-            } else if tile == &1 {
+            } else if tile == &val {
                 for t in &tiles {
                     self.add(*t, 1);
                 }
@@ -124,9 +131,9 @@ impl Board {
                 _ => position
             };
             let tile = self.board.get(new_pos).unwrap();
-            if tile == &2 {
+            if tile != &val && tile != &0 {
                 tiles.push(new_pos);
-            } else if tile == &1 {
+            } else if tile == &val {
                 for t in &tiles {
                     self.add(*t, 1);
                 }
@@ -146,9 +153,9 @@ impl Board {
                 true => position
             };
             let tile = self.board.get(new_pos).unwrap();
-            if tile == &2 {
+            if tile != &val && tile != &0 {
                 tiles.push(new_pos);
-            } else if tile == &1 {
+            } else if tile == &val {
                 for t in &tiles {
                     self.add(*t, 1);
                 }
@@ -167,9 +174,9 @@ impl Board {
                 Some(x) => Some(x).unwrap()
             };
             let tile = self.board.get(new_pos).unwrap();
-            if tile == &2 {
+            if tile != &val && tile != &0 {
                 tiles.push(new_pos);
-            } else if tile == &1 {
+            } else if tile == &val {
                 for t in &tiles {
                     self.add(*t, 1);
                 }
@@ -305,8 +312,12 @@ fn main() {
             true => convert_2d(&input),
             false => {println!("ERROR: invalid input"); continue},
         };
-
-        board.ins(res, 1);
+        
+        let value = match board.player_turn {
+            true => 1,
+            false => 2
+        };
+        board.ins(res, value);
 
         //monte_carlo_tree_search(board, MAX_STEPS, TIME);
 
