@@ -216,7 +216,7 @@ impl Board {
             let new_pos_u: usize = new_pos.into();
             let tile = self.board.get(new_pos_u).unwrap();
             if tile == &0 {
-                for j in 0..2 {
+                for j in 1..3 {
                     self.check_tile_actions(new_pos, j, debug);
                 }
             }
@@ -225,6 +225,19 @@ impl Board {
         // Update middle row
 
         // Update bottom row
+        for i in 0..3 {
+            let new_pos: u8 = match (pos + 9 - i) < self.board_size.into() { // overflow when on right most col
+                true => continue,
+                false => pos + 9 - i
+            };
+            let new_pos_u: usize = new_pos.into();
+            let tile = self.board.get(new_pos_u).unwrap();
+            if tile == &0 {
+                for j in 1..3 {
+                    self.check_tile_actions(new_pos, j, debug);
+                }
+            }
+        }
 
     }
 
@@ -246,7 +259,7 @@ impl Board {
             tiles.clear();
 
             loop {
-                
+
                 // Depending on direction, changes the formula for iteration
                 let new_pos: usize = match direction {
 
@@ -260,12 +273,32 @@ impl Board {
                     },
 
                     1 => { // Left
-                        let position = pos - u;
-                        if position % 8 == 7 { // Add checked sub
+                        let position = match pos.checked_sub(u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        };
+                        if position % 8 == 7 {
                             break;
                         } else {
                             position.into()
                         }
+                    },
+
+                    2 => { // Down
+                        let position = pos + (u * 8);
+                        if position < self.board_size.into() {
+                            position.into()
+                        } else {
+                            break;
+                        }
+                    },
+
+                    3 => { // Up
+                        let new_pos = match pos.checked_sub(u * 8) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        new_pos.into()
                     },
 
                     _ => return
@@ -311,138 +344,6 @@ impl Board {
 
             }
         }
-        /*
-        // Iterate right from pos
-        loop {
-
-            let position = pos + u; // Defines the formula for the new position
-
-            // Define new position, if new_pos % 8 = 0 then it overflows to next row and breaks
-            let new_pos: usize = match position % 8 {
-                0 => break,
-                _ => position.into()
-            }; 
-
-            let tile = self.board.get(new_pos).unwrap(); // Gets value from tile at new position
-
-            if tile != &val && tile != &0 {
-                // If the tile is not the same color as inserted, add to tiles vec
-                tiles.push(new_pos);
-            } else if tile == &val && tiles.len() != 0 {
-                // If there is a tile the same color as the initial val with opposite tiles inbetween...
-                if val == 1 {
-                    if debug {
-                        println!("Added {} from actions for player {}", new_pos, val);
-                    }
-                    self.player_available_actions.insert(*tile);
-                    tiles.clear();
-                    break;
-                } else {
-                    if debug {
-                        println!("Removed {} from actions for player {}", new_pos, val);
-                    }
-                    self.cpu_available_actions.insert(*tile);
-                    tiles.clear();
-                    break;
-                }
-            } else {
-                // Else, blank tile means not available action 
-                if debug {
-                    println!("Removed {} from actions for player {}", pos, val);
-                }
-                if val == 1 {
-                    self.player_available_actions.remove(&pos);
-                } else {
-                    self.cpu_available_actions.remove(&pos);
-                }
-
-                tiles.clear();
-                break;
-            }
-            u += 1;
-        }
-
-        // Iterate left
-        u = 1;
-        loop {
-            let position = pos - u;
-            let new_pos: usize = match position % 8 {
-                7 => break,
-                _ => position.into()
-            };
-            let tile = self.board.get(new_pos).unwrap();
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val && tiles.len() != 0 {
-                if val == 1 {
-                    self.player_available_actions.insert(*tile);
-                    tiles.clear();
-                    return;
-                } else {
-                    self.cpu_available_actions.insert(*tile);
-                    tiles.clear();
-                    return;
-                }
-            } else {
-                if debug {
-                    println!("Removed {} from actions", pos);
-                }
-                if val == 1 {
-                    self.player_available_actions.remove(&pos);
-                } else {
-                    self.cpu_available_actions.remove(&pos);
-                }
-                tiles.clear();
-                break;
-            }
-            u += 1;
-            
-        }
-
-        // Iterate down
-        u = 1;
-        loop {
-            let position = pos + (u * 8);
-
-            let new_pos: usize = match position < self.board_size.into() {
-                false => break,
-                true => position.into()
-            };
-
-            let tile = self.board.get(new_pos).unwrap();
-
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val && tiles.len() != 0 {
-                if val == 1 {
-                    self.player_available_actions.insert(*tile);
-                    tiles.clear();
-                    return;
-                } else {
-                    self.cpu_available_actions.insert(*tile);
-                    tiles.clear();
-                    return;
-                }
-            } else {
-                if debug {
-                    println!("Removed {} from actions", pos);
-                }
-                if val == 1 {
-                    self.player_available_actions.remove(&pos);
-                } else {
-                    self.cpu_available_actions.remove(&pos);
-                }
-                tiles.clear();
-                break;
-            }
-            u += 1;
-        }
-
-        if debug {
-
-        }
-        */
-
     }
 
     /**
@@ -538,7 +439,7 @@ fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
 
 fn main() {
     
-    println!("Welcome to MCTS Reversi Solver!");
+    println!("Play a game of Reversi against AI!");
 
     const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
