@@ -75,7 +75,7 @@ impl Board {
                 print!("{} ", Green.paint("●"));
             } else {
                 if self.player_available_actions.contains(&count) {
-                    print!("{} ", Style::default().bold().paint("-"));
+                    print!("{} ", Style::default().bold().paint("*"));
                 } else {
                     print!("- ");
                 }
@@ -85,7 +85,7 @@ impl Board {
         print!("{}\n\n", Style::default().bold().paint("8"));
     }
 
-    fn ins(&mut self, pos: u8, val: u8) {
+    fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
         // add to board
         let pos_u: usize = match self.get_available_actions().contains(&pos) {
@@ -188,10 +188,11 @@ impl Board {
         }
 
         // flip diagonal
-        
 
         // update available actions
         self.player_available_actions.remove(&pos);
+        self.cpu_available_actions.remove(&pos);
+        self.update_surrounding_actions(pos, val, debug);
 
         // alternate turns
         if self.player_turn {
@@ -201,6 +202,255 @@ impl Board {
         }
     }
 
+    /**
+     *  For inserted tile, will check if the tiles surrounding it are valid actions
+     */
+    fn update_surrounding_actions(&mut self, pos: u8, val: u8, debug: bool) {
+
+        // Update top row
+        for i in 0..3 {
+            let new_pos: u8 = match pos.checked_sub(9 - i) { // overflow when on right most col
+                None => continue,
+                Some(x) => Some(x).unwrap()
+            };
+            let new_pos_u: usize = new_pos.into();
+            let tile = self.board.get(new_pos_u).unwrap();
+            if tile == &0 {
+                for j in 0..2 {
+                    self.check_tile_actions(new_pos, j, debug);
+                }
+            }
+        }
+
+        // Update middle row
+
+        // Update bottom row
+
+    }
+
+    /**
+     * Given a tile position it will check in all directions if it is an available option 
+     * for player with the input val (1 or 2)
+     */
+    fn check_tile_actions(&mut self, pos: u8, val: u8, debug: bool){
+
+        let pos_u: usize = pos.into();
+
+        let mut u: u8 = 1;
+        let mut tiles = Vec::new();
+
+        // Manages the direction of iteration
+        for direction in 0..8 {
+
+            u = 1;
+            tiles.clear();
+
+            loop {
+                
+                // Depending on direction, changes the formula for iteration
+                let new_pos: usize = match direction {
+
+                    0 => { // Right
+                        let position = pos + u;
+                        if position % 8 == 0 {
+                            break;
+                        } else {
+                            position.into()
+                        }
+                    },
+
+                    1 => { // Left
+                        let position = pos - u;
+                        if position % 8 == 7 { // Add checked sub
+                            break;
+                        } else {
+                            position.into()
+                        }
+                    },
+
+                    _ => return
+                };
+
+                let tile = self.board.get(new_pos).unwrap(); // Gets value from tile at new position
+
+                if tile != &val && tile != &0 {
+                    // If the tile is not the same color as inserted, add to tiles vec
+                    tiles.push(new_pos);
+                } else if tile == &val && tiles.len() != 0 {
+                    // If there is a tile the same color as the initial val with opposite tiles inbetween...
+                    if val == 1 {
+                        if debug {
+                            println!("Added {} from actions for player {}", new_pos, val);
+                        }
+                        self.player_available_actions.insert(*tile);
+                        tiles.clear();
+                        break;
+                    } else {
+                        if debug {
+                            println!("Removed {} from actions for player {}", new_pos, val);
+                        }
+                        self.cpu_available_actions.insert(*tile);
+                        tiles.clear();
+                        break;
+                    }
+                } else {
+                    // Else, blank tile means not available action 
+                    if debug {
+                        println!("Removed {} from actions for player {}", pos, val);
+                    }
+                    if val == 1 {
+                        self.player_available_actions.remove(&pos);
+                    } else {
+                        self.cpu_available_actions.remove(&pos);
+                    }
+
+                    tiles.clear();
+                    break;
+                }
+                u += 1;
+
+            }
+        }
+        /*
+        // Iterate right from pos
+        loop {
+
+            let position = pos + u; // Defines the formula for the new position
+
+            // Define new position, if new_pos % 8 = 0 then it overflows to next row and breaks
+            let new_pos: usize = match position % 8 {
+                0 => break,
+                _ => position.into()
+            }; 
+
+            let tile = self.board.get(new_pos).unwrap(); // Gets value from tile at new position
+
+            if tile != &val && tile != &0 {
+                // If the tile is not the same color as inserted, add to tiles vec
+                tiles.push(new_pos);
+            } else if tile == &val && tiles.len() != 0 {
+                // If there is a tile the same color as the initial val with opposite tiles inbetween...
+                if val == 1 {
+                    if debug {
+                        println!("Added {} from actions for player {}", new_pos, val);
+                    }
+                    self.player_available_actions.insert(*tile);
+                    tiles.clear();
+                    break;
+                } else {
+                    if debug {
+                        println!("Removed {} from actions for player {}", new_pos, val);
+                    }
+                    self.cpu_available_actions.insert(*tile);
+                    tiles.clear();
+                    break;
+                }
+            } else {
+                // Else, blank tile means not available action 
+                if debug {
+                    println!("Removed {} from actions for player {}", pos, val);
+                }
+                if val == 1 {
+                    self.player_available_actions.remove(&pos);
+                } else {
+                    self.cpu_available_actions.remove(&pos);
+                }
+
+                tiles.clear();
+                break;
+            }
+            u += 1;
+        }
+
+        // Iterate left
+        u = 1;
+        loop {
+            let position = pos - u;
+            let new_pos: usize = match position % 8 {
+                7 => break,
+                _ => position.into()
+            };
+            let tile = self.board.get(new_pos).unwrap();
+            if tile != &val && tile != &0 {
+                tiles.push(new_pos);
+            } else if tile == &val && tiles.len() != 0 {
+                if val == 1 {
+                    self.player_available_actions.insert(*tile);
+                    tiles.clear();
+                    return;
+                } else {
+                    self.cpu_available_actions.insert(*tile);
+                    tiles.clear();
+                    return;
+                }
+            } else {
+                if debug {
+                    println!("Removed {} from actions", pos);
+                }
+                if val == 1 {
+                    self.player_available_actions.remove(&pos);
+                } else {
+                    self.cpu_available_actions.remove(&pos);
+                }
+                tiles.clear();
+                break;
+            }
+            u += 1;
+            
+        }
+
+        // Iterate down
+        u = 1;
+        loop {
+            let position = pos + (u * 8);
+
+            let new_pos: usize = match position < self.board_size.into() {
+                false => break,
+                true => position.into()
+            };
+
+            let tile = self.board.get(new_pos).unwrap();
+
+            if tile != &val && tile != &0 {
+                tiles.push(new_pos);
+            } else if tile == &val && tiles.len() != 0 {
+                if val == 1 {
+                    self.player_available_actions.insert(*tile);
+                    tiles.clear();
+                    return;
+                } else {
+                    self.cpu_available_actions.insert(*tile);
+                    tiles.clear();
+                    return;
+                }
+            } else {
+                if debug {
+                    println!("Removed {} from actions", pos);
+                }
+                if val == 1 {
+                    self.player_available_actions.remove(&pos);
+                } else {
+                    self.cpu_available_actions.remove(&pos);
+                }
+                tiles.clear();
+                break;
+            }
+            u += 1;
+        }
+
+        if debug {
+
+        }
+        */
+
+    }
+
+    /**
+     * Returns the IndexSet of available actions depending on which players turn it is
+     * 
+     * Should only use this function to get the available actions, don't individually
+     * reference the player or cpu sets
+     */
     fn get_available_actions(&mut self) -> &IndexSet<u8> {
         if self.player_turn {
             return &self.player_available_actions;
@@ -209,6 +459,13 @@ impl Board {
         }
     }
 
+    /**
+     * Add value at position on board
+     * 
+     * val = 0: unused square
+     * val = 1: player piece
+     * val = 2: cpu piece
+     */
     fn add(&mut self, pos: usize, val: u8){
         self.board.splice(pos..(pos + 1), [val].iter().cloned());
     }
@@ -218,15 +475,7 @@ impl Board {
         self.board.insert(pos_u, 0);
         self.player_available_actions.insert(pos);
     }
-    /*
-    fn flip(&mut self, pos: usize) {
-        if self.board[pos] == 1 {
-            self.board.insert(pos, 2)
-        }else if self.board[pos] == 2 {
-            self.board.insert(pos, 1)
-        }
-    }
-    */
+    
 }
 
 /**
@@ -317,7 +566,7 @@ fn main() {
             true => 1,
             false => 2
         };
-        board.ins(res, value);
+        board.ins(res, value, true);
 
         //monte_carlo_tree_search(board, MAX_STEPS, TIME);
 
