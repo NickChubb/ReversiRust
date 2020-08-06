@@ -26,16 +26,24 @@ struct Board {
  */
 impl Board {
 
+    /**
+     * Initializes a Reversi game board
+     * 
+     * board elements are u8 integers, which represent:
+     *      0 => empty square
+     *      1 => player
+     *      2 => cpu
+     */
     fn new(w: u8, h: u8) -> Board {
 
         let size = w * h;
         let mut player_actions: IndexSet<u8> = IndexSet::new();
         let mut cpu_actions: IndexSet<u8> = IndexSet::new();
         let mut new_board = vec![0; (size).into()];
-
-        new_board[27] = 2;
+        
         new_board[28] = 1;
         new_board[35] = 1;
+        new_board[27] = 2;
         new_board[36] = 2;
 
         player_actions.insert(26);
@@ -43,6 +51,10 @@ impl Board {
         player_actions.insert(37);
         player_actions.insert(44);
 
+        cpu_actions.insert(29);
+        cpu_actions.insert(20);
+        cpu_actions.insert(35);
+        cpu_actions.insert(43);
 
         Board {
             width: w,
@@ -51,10 +63,16 @@ impl Board {
             board: new_board, //must convert u8 type -> usize type
             player_available_actions: player_actions,
             cpu_available_actions: cpu_actions,
-            player_turn: true
+            player_turn: true // Player always takes the first turn
         }
     }
 
+    /**
+     * Print the board vec to the screen
+     * 
+     * Players tiles are printed in RED
+     * CPUs tiles are printed in GREEN
+     */
     fn print(&mut self) {
 
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
@@ -85,6 +103,11 @@ impl Board {
         print!("{}\n\n", Style::default().bold().paint("8"));
     }
 
+    /**
+     * Handles a piece being put onto the board
+     * 
+     * Adds to board -> flips pieces -> updates available actions -> change turns
+     */
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
         // add to board
@@ -150,11 +173,53 @@ impl Board {
                         new_pos.into()
                     },
 
+                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
+                        let new_pos = match pos.checked_sub(u * 8 + u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        if new_pos % 8 != 7 {
+                            new_pos.into()
+                        } else {
+                            break;
+                        }
+                    }
+
+                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
+                        let new_pos = match pos.checked_sub(u * 8 - u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        if new_pos % 8 != 0 {
+                            new_pos.into()
+                        } else {
+                            break;
+                        }
+                    }
+
+                    6 => { // Down left: must check that doesnt % 8 = 7 and 
+                        let position = pos + (u * 8) - u;
+                        if position < self.board_size.into() && position % 8 != 7 {
+                            position.into()
+                        } else {
+                            break;
+                        }
+                    }
+
+                    7 => { // Down left: must check that doesnt % 8 = 7 and 
+                        let position = pos + (u * 8) + u;
+                        if position < self.board_size.into() && position % 8 != 0 {
+                            position.into()
+                        } else {
+                            break;
+                        }
+                    }
+
                     _ => break
                 };
 
                 let tile = self.board.get(new_pos).unwrap();
-
+                
                 if tile != &val && tile != &0 {
                     tiles.push(new_pos);
                 } else if tile == &val {
@@ -165,11 +230,10 @@ impl Board {
                     tiles.clear();
                     break;
                 }
+                
                 u += 1;
             }
         }
-
-        // flip diagonal
 
         // update available actions
         self.player_available_actions.remove(&pos);
