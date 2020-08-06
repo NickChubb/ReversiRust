@@ -53,7 +53,7 @@ impl Board {
 
         cpu_actions.insert(29);
         cpu_actions.insert(20);
-        cpu_actions.insert(35);
+        cpu_actions.insert(34);
         cpu_actions.insert(43);
 
         Board {
@@ -73,7 +73,7 @@ impl Board {
      * Players tiles are printed in RED
      * CPUs tiles are printed in GREEN
      */
-    fn print(&mut self) {
+    fn print(&mut self, debug: bool) {
 
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
@@ -95,7 +95,12 @@ impl Board {
                 if self.player_available_actions.contains(&count) {
                     print!("{} ", Style::default().bold().paint("*"));
                 } else {
-                    print!("- ");
+                    if debug && self.cpu_available_actions.contains(&count) {
+                        print!("{} ", Style::default().bold().paint("+"));
+                    } else {
+                        print!("- ");
+                    }
+                    
                 }
             }
             count += 1; 
@@ -245,8 +250,14 @@ impl Board {
 
         // alternate turns
         if self.player_turn {
+            if debug {
+                println!("CPU's turn");
+            }
             self.player_turn = false
         }else {
+            if debug {
+                println!("Player's turn");
+            }
             self.player_turn = true
         }
     }
@@ -545,7 +556,7 @@ fn main() {
 
     loop{
 
-        board.print();
+        board.print(true);
 
         println!("Place piece at position: ");
 
