@@ -283,6 +283,24 @@ impl Board {
         }
 
         // Update middle row
+        for i in 0..3 {
+            if i != 0 {
+                let new_pos: u8 = match pos.checked_sub(i - 1) { // overflow when on right most col
+                    None => continue,
+                    Some(x) => Some(x).unwrap()
+                };
+                if new_pos % 8 != 7 {
+                    let new_pos_u: usize = new_pos.into();
+                    let tile = self.board.get(new_pos_u).unwrap();
+                    if tile == &0 {
+                        for j in 1..3 {
+                            self.check_tile_actions(new_pos, j, debug);
+                        }
+                    }
+                }
+            }
+        }
+        
 
         // Update bottom row
         for i in 0..3 {
@@ -419,14 +437,14 @@ impl Board {
                         if debug {
                             println!("Added {} from actions for player {}", new_pos, val);
                         }
-                        self.player_available_actions.insert(*tile);
+                        self.player_available_actions.insert(pos);
                         tiles.clear();
                         return;
                     } else {
                         if debug {
                             println!("Removed {} from actions for player {}", new_pos, val);
                         }
-                        self.cpu_available_actions.insert(*tile);
+                        self.cpu_available_actions.insert(pos);
                         tiles.clear();
                         return;
                     }
