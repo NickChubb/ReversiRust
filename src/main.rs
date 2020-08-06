@@ -133,14 +133,14 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: usize = match direction {
+                let new_pos: u8 = match direction {
 
                     0 => { // Right
                         let position = pos + u;
                         if position % 8 == 0 {
                             break;
                         } else {
-                            position.into()
+                            position
                         }
                     },
 
@@ -152,14 +152,14 @@ impl Board {
                         if position % 8 == 7 {
                             break;
                         } else {
-                            position.into()
+                            position
                         }
                     },
 
                     2 => { // Down
                         let position = pos + (u * 8);
                         if position < self.board_size.into() {
-                            position.into()
+                            position
                         } else {
                             break;
                         }
@@ -170,7 +170,7 @@ impl Board {
                             None => break,
                             Some(x) => Some(x).unwrap()
                         }; 
-                        new_pos.into()
+                        new_pos
                     },
 
                     4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
@@ -179,11 +179,11 @@ impl Board {
                             Some(x) => Some(x).unwrap()
                         }; 
                         if new_pos % 8 != 7 {
-                            new_pos.into()
+                            new_pos
                         } else {
                             break;
                         }
-                    }
+                    },
 
                     5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
                         let new_pos = match pos.checked_sub(u * 8 - u) {
@@ -191,40 +191,43 @@ impl Board {
                             Some(x) => Some(x).unwrap()
                         }; 
                         if new_pos % 8 != 0 {
-                            new_pos.into()
+                            new_pos
                         } else {
                             break;
                         }
-                    }
+                    },
 
                     6 => { // Down left: must check that doesnt % 8 = 7 and 
                         let position = pos + (u * 8) - u;
                         if position < self.board_size.into() && position % 8 != 7 {
-                            position.into()
+                            position
                         } else {
                             break;
                         }
-                    }
+                    },
 
                     7 => { // Down left: must check that doesnt % 8 = 7 and 
                         let position = pos + (u * 8) + u;
                         if position < self.board_size.into() && position % 8 != 0 {
-                            position.into()
+                            position
                         } else {
                             break;
                         }
-                    }
+                    },
 
                     _ => break
                 };
 
-                let tile = self.board.get(new_pos).unwrap();
-                
+                let new_pos_usize: usize = new_pos.into();
+
+                let tile = self.board.get(new_pos_usize).unwrap();
+
                 if tile != &val && tile != &0 {
                     tiles.push(new_pos);
                 } else if tile == &val {
                     for t in &tiles {
-                        self.add(*t, 1);
+                        self.add(*t, val);
+                        self.update_surrounding_actions(*t, val, debug);
                     }
                 } else {
                     tiles.clear();
@@ -307,14 +310,14 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: usize = match direction {
+                let new_pos: u8 = match direction {
 
                     0 => { // Right
                         let position = pos + u;
                         if position % 8 == 0 {
                             break;
                         } else {
-                            position.into()
+                            position
                         }
                     },
 
@@ -326,14 +329,14 @@ impl Board {
                         if position % 8 == 7 {
                             break;
                         } else {
-                            position.into()
+                            position
                         }
                     },
 
                     2 => { // Down
                         let position = pos + (u * 8);
                         if position < self.board_size.into() {
-                            position.into()
+                            position
                         } else {
                             break;
                         }
@@ -344,13 +347,57 @@ impl Board {
                             None => break,
                             Some(x) => Some(x).unwrap()
                         }; 
-                        new_pos.into()
+                        new_pos
+                    },
+
+                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
+                        let new_pos = match pos.checked_sub(u * 8 + u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        if new_pos % 8 != 7 {
+                            new_pos
+                        } else {
+                            break;
+                        }
+                    },
+
+                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
+                        let new_pos = match pos.checked_sub(u * 8 - u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        if new_pos % 8 != 0 {
+                            new_pos
+                        } else {
+                            break;
+                        }
+                    },
+
+                    6 => { // Down left: must check that doesnt % 8 = 7 and 
+                        let position = pos + (u * 8) - u;
+                        if position < self.board_size.into() && position % 8 != 7 {
+                            position
+                        } else {
+                            break;
+                        }
+                    },
+
+                    7 => { // Down left: must check that doesnt % 8 = 7 and 
+                        let position = pos + (u * 8) + u;
+                        if position < self.board_size.into() && position % 8 != 0 {
+                            position
+                        } else {
+                            break;
+                        }
                     },
 
                     _ => break
                 };
 
-                let tile = self.board.get(new_pos).unwrap(); // Gets value from tile at new position
+                let new_pos_usize: usize = new_pos.into();
+
+                let tile = self.board.get(new_pos_usize).unwrap(); // Gets value from tile at new position
 
                 if tile != &val && tile != &0 {
                     // If the tile is not the same color as inserted, add to tiles vec
@@ -413,8 +460,9 @@ impl Board {
      * val = 1: player piece
      * val = 2: cpu piece
      */
-    fn add(&mut self, pos: usize, val: u8){
-        self.board.splice(pos..(pos + 1), [val].iter().cloned());
+    fn add(&mut self, pos: u8, val: u8){
+        let pos_u: usize = pos.into();
+        self.board.splice(pos_u..(pos_u + 1), [val].iter().cloned());
     }
 
     fn rm(&mut self, pos: u8){
