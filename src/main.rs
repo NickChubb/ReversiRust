@@ -98,93 +98,75 @@ impl Board {
 
         self.board.splice(pos_u..pos_u+1, [val].iter().cloned());
 
-        let mut u: usize = 1;
+        let mut u: u8 = 1;
         let mut tiles = Vec::new();
-        
-        // Iterate right
-        loop {
-            let position = (pos_u + u);
-            let new_pos = match position % 8 {
-                0 => break,
-                _ => position
-            };
-            let tile = self.board.get(new_pos).unwrap();
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val {
-                for t in &tiles {
-                    self.add(*t, 1);
-                }
-            } else {
-                tiles.clear();
-                break;
-            }
-            u += 1;
-        }
 
-        // Iterate left
-        u = 1;
-        loop {
-            let position = (pos_u - u);
-            let new_pos = match position % 8 {
-                7 => break,
-                _ => position
-            };
-            let tile = self.board.get(new_pos).unwrap();
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val {
-                for t in &tiles {
-                    self.add(*t, 1);
-                }
-            } else {
-                tiles.clear();
-                break;
-            }
-            u += 1;
-        }
+        // Manages the direction of iteration
+        for direction in 0..8 {
 
-        // Iterate down
-        u = 1;
-        loop {
-            let position = pos_u + (u * 8);
-            let new_pos = match position < self.board_size.into() {
-                false => break,
-                true => position
-            };
-            let tile = self.board.get(new_pos).unwrap();
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val {
-                for t in &tiles {
-                    self.add(*t, 1);
+            u = 1;
+            tiles.clear();
+
+            loop {
+
+                // Depending on direction, changes the formula for iteration
+                let new_pos: usize = match direction {
+
+                    0 => { // Right
+                        let position = pos + u;
+                        if position % 8 == 0 {
+                            break;
+                        } else {
+                            position.into()
+                        }
+                    },
+
+                    1 => { // Left
+                        let position = match pos.checked_sub(u) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        };
+                        if position % 8 == 7 {
+                            break;
+                        } else {
+                            position.into()
+                        }
+                    },
+
+                    2 => { // Down
+                        let position = pos + (u * 8);
+                        if position < self.board_size.into() {
+                            position.into()
+                        } else {
+                            break;
+                        }
+                    },
+
+                    3 => { // Up
+                        let new_pos = match pos.checked_sub(u * 8) {
+                            None => break,
+                            Some(x) => Some(x).unwrap()
+                        }; 
+                        new_pos.into()
+                    },
+
+                    _ => break
+                };
+
+                let tile = self.board.get(new_pos).unwrap();
+
+                if tile != &val && tile != &0 {
+                    tiles.push(new_pos);
+                } else if tile == &val {
+                    for t in &tiles {
+                        self.add(*t, 1);
+                    }
+                } else {
+                    tiles.clear();
+                    break;
                 }
-            } else {
-                tiles.clear();
-                break;
+                u += 1;
             }
-            u += 1;
-        }
-        
-        // Iterate up
-        u = 1;
-        loop {
-            let new_pos = match pos_u.checked_sub(u * 8) {
-                None => break,
-                Some(x) => Some(x).unwrap()
-            };
-            let tile = self.board.get(new_pos).unwrap();
-            if tile != &val && tile != &0 {
-                tiles.push(new_pos);
-            } else if tile == &val {
-                for t in &tiles {
-                    self.add(*t, 1);
-                }
-            } else {
-                tiles.clear();
-                break;
-            }
-            u += 1;
         }
 
         // flip diagonal
@@ -227,8 +209,8 @@ impl Board {
         // Update bottom row
         for i in 0..3 {
             let new_pos: u8 = match (pos + 9 - i) < self.board_size.into() { // overflow when on right most col
-                true => continue,
-                false => pos + 9 - i
+                true => pos + 9 - i,
+                false => continue
             };
             let new_pos_u: usize = new_pos.into();
             let tile = self.board.get(new_pos_u).unwrap();
@@ -301,7 +283,7 @@ impl Board {
                         new_pos.into()
                     },
 
-                    _ => return
+                    _ => break
                 };
 
                 let tile = self.board.get(new_pos).unwrap(); // Gets value from tile at new position
@@ -317,14 +299,14 @@ impl Board {
                         }
                         self.player_available_actions.insert(*tile);
                         tiles.clear();
-                        break;
+                        return;
                     } else {
                         if debug {
                             println!("Removed {} from actions for player {}", new_pos, val);
                         }
                         self.cpu_available_actions.insert(*tile);
                         tiles.clear();
-                        break;
+                        return;
                     }
                 } else {
                     // Else, blank tile means not available action 
