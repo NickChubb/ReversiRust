@@ -246,7 +246,10 @@ impl Board {
         // update available actions
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
-        self.update_surrounding_actions(pos, val, debug);
+
+        for action in self.get_available_actions()  {
+            self.check_tile_actions(action, val, debug);
+        }
 
         // alternate turns
         if self.player_turn {
@@ -474,11 +477,13 @@ impl Board {
      * Should only use this function to get the available actions, don't individually
      * reference the player or cpu sets
      */
-    fn get_available_actions(&mut self) -> &IndexSet<u8> {
+    fn get_available_actions(&self) -> IndexSet<u8> {
         if self.player_turn {
-            return &self.player_available_actions;
+            let actions: IndexSet<u8> = IndexSet::clone(&self.player_available_actions);
+            return actions;
         } else {
-            return &self.cpu_available_actions;
+            let actions: IndexSet<u8> = IndexSet::clone(&self.cpu_available_actions);
+            return actions;
         }
     }
 
@@ -562,7 +567,7 @@ fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
 
 fn main() {
     
-    println!("Play a game of Reversi against AI!");
+    println!("\nPlay a game of Reversi against AI!");
 
     const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
