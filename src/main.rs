@@ -132,7 +132,7 @@ impl Board {
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
         // add to board
-        let pos_u: usize = match self.get_available_actions(false, debug).contains(&pos) {
+        let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
                 println!("ERROR: not a valid action");
                 return;
@@ -304,7 +304,7 @@ impl Board {
 
         for player in 1..3 {
             for tile in self.get_perimeter(debug) {
-                self.check_tile_actions(tile, player, false);
+                self.check_tile_actions(tile, player, debug);
             }
         }
 
@@ -319,6 +319,11 @@ impl Board {
                 println!("Player's turn");
             }
             self.player_turn = true
+        }
+
+        if debug {
+            println!("Player's Available Actions: {:?}", self.get_player_actions(debug));
+            println!("CPU's Available Actions: {:?}", self.get_cpu_actions(debug));
         }
     }
 
@@ -438,14 +443,14 @@ impl Board {
                     // If there is a tile the same color as the initial val with opposite tiles inbetween...
                     if val == 1 {
                         if debug {
-                            println!("Added {} from actions for player {}", new_pos, val);
+                            println!("Added {} to actions for player {}", new_pos, val);
                         }
                         self.player_available_actions.insert(pos);
                         tiles.clear();
                         return;
                     } else {
                         if debug {
-                            println!("Removed {} from actions for player {}", new_pos, val);
+                            println!("Added {} to actions for player {}", new_pos, val);
                         }
                         self.cpu_available_actions.insert(pos);
                         tiles.clear();
@@ -454,7 +459,7 @@ impl Board {
                 } else {
                     // Else, blank tile means not available action 
                     if debug {
-                        println!("Removed {} from actions for player {}", pos, val);
+                        //println!("Removed {} from actions for player {}", pos, val);
                     }
                     if val == 1 {
                         self.player_available_actions.remove(&pos);
@@ -477,8 +482,8 @@ impl Board {
      * Should only use this function to get the available actions, don't individually
      * reference the player or cpu sets
      */
-    fn get_available_actions(&self, inv: bool, debug: bool) -> IndexSet<u8> {
-        if self.player_turn && !inv {
+    fn get_available_actions(&self, debug: bool) -> IndexSet<u8> {
+        if self.player_turn {
             let actions: IndexSet<u8> = IndexSet::clone(&self.player_available_actions);
             if debug {
                 println!("Player Available Actions: {:?}", actions);
@@ -493,10 +498,21 @@ impl Board {
         }
     }
 
+    fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.player_available_actions)
+    }
+
+    fn get_cpu_actions(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.cpu_available_actions)
+    }
+
     fn get_direction(&self) -> u8 {
         42
     }
 
+    /**
+     * Returns IndexSet of the tiles in the perimeter of the board pieces
+     */
     fn get_perimeter(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.perimeter)
     }
