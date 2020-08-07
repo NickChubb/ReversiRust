@@ -16,6 +16,7 @@ struct Board {
     height: u8,
     board_size: u8,
     board: Vec<u8>,
+    perimeter: IndexSet<u8>,
     player_available_actions: IndexSet<u8>,
     cpu_available_actions: IndexSet<u8>,
     player_turn: bool
@@ -39,6 +40,7 @@ impl Board {
         let size = w * h;
         let mut player_actions: IndexSet<u8> = IndexSet::new();
         let mut cpu_actions: IndexSet<u8> = IndexSet::new();
+        let mut perimeter_tiles: IndexSet<u8> = IndexSet::new();
         let mut new_board = vec![0; (size).into()];
         
         new_board[28] = 1;
@@ -56,11 +58,25 @@ impl Board {
         cpu_actions.insert(34);
         cpu_actions.insert(43);
 
+        perimeter_tiles.insert(18);
+        perimeter_tiles.insert(19);
+        perimeter_tiles.insert(20);
+        perimeter_tiles.insert(21);
+        perimeter_tiles.insert(26);
+        perimeter_tiles.insert(29);
+        perimeter_tiles.insert(34);
+        perimeter_tiles.insert(37);
+        perimeter_tiles.insert(42);
+        perimeter_tiles.insert(43);
+        perimeter_tiles.insert(44);
+        perimeter_tiles.insert(45);
+
         Board {
             width: w,
             height: h,
             board_size: size,
             board: new_board, //must convert u8 type -> usize type
+            perimeter: perimeter_tiles,
             player_available_actions: player_actions,
             cpu_available_actions: cpu_actions,
             player_turn: true // Player always takes the first turn
@@ -111,7 +127,7 @@ impl Board {
     /**
      * Handles a piece being put onto the board
      * 
-     * Adds to board -> flips pieces -> updates available actions -> change turns
+     * Adds to board -> flips pieces -> update perimeter -> updates available actions -> change turns
      */
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
@@ -232,7 +248,6 @@ impl Board {
                 } else if tile == &val {
                     for t in &tiles {
                         self.add(*t, val);
-                        self.update_surrounding_actions(*t, val, debug);
                     }
                 } else {
                     tiles.clear();
@@ -243,19 +258,55 @@ impl Board {
             }
         }
 
+        // Update perimeter
+        self.perimeter.remove(&pos);
+        
+        for i in 0..3 {
+            let new_pos: u8 = match pos.checked_sub(9 - i) {
+                None => continue,
+                Some(x) => Some(x).unwrap()
+            };
+            let new_pos_usize: usize = new_pos.into();
+            if self.board.get(new_pos_usize).unwrap() == &0 { // implement row overflow handling
+                self.perimeter.insert(new_pos);
+            }
+        }
+
+        for i in 0..3 {
+            let new_pos: u8 = pos - 1 + i;
+            let new_pos_usize: usize = new_pos.into();
+            if i != 1 {
+                if new_pos < self.board_size {
+                    if self.board.get(new_pos_usize).unwrap() == &0 {
+                        self.perimeter.insert(new_pos);
+                    }
+                }
+            }   
+        }
+
+        for i in 0..3 {
+            let new_pos: u8 = pos + 9 - i;
+            let new_pos_usize: usize = new_pos.into();
+            if new_pos < self.board_size {
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
+                }
+            }
+        }
+
+        if debug {
+            println!("{:?}", self.perimeter);
+        }
+
         // update available actions
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
 
-        for action in self.get_available_actions(false, debug)  {
-            self.check_tile_actions(action, val, debug);
+        for player in 1..3 {
+            for tile in self.get_perimeter(debug) {
+                self.check_tile_actions(tile, player, false);
+            }
         }
-
-        for action in self.get_available_actions(true, debug)  {
-            self.check_tile_actions(action, val, debug);
-        }
-
-
 
         // alternate turns
         if self.player_turn {
@@ -269,63 +320,6 @@ impl Board {
             }
             self.player_turn = true
         }
-    }
-
-    /**
-     *  For inserted tile, will check if the tiles surrounding it are valid actions
-     */
-    fn update_surrounding_actions(&mut self, pos: u8, val: u8, debug: bool) {
-
-        // Update top row
-        for i in 0..3 {
-            let new_pos: u8 = match pos.checked_sub(9 - i) { // overflow when on right most col
-                None => continue,
-                Some(x) => Some(x).unwrap()
-            };
-            let new_pos_u: usize = new_pos.into();
-            let tile = self.board.get(new_pos_u).unwrap();
-            if tile == &0 {
-                for j in 1..3 {
-                    self.check_tile_actions(new_pos, j, debug);
-                }
-            }
-        }
-
-        // Update middle row
-        for i in 0..3 {
-            if i != 0 {
-                let new_pos: u8 = match pos.checked_sub(i - 1) { // overflow when on right most col
-                    None => continue,
-                    Some(x) => Some(x).unwrap()
-                };
-                if new_pos % 8 != 7 {
-                    let new_pos_u: usize = new_pos.into();
-                    let tile = self.board.get(new_pos_u).unwrap();
-                    if tile == &0 {
-                        for j in 1..3 {
-                            self.check_tile_actions(new_pos, j, debug);
-                        }
-                    }
-                }
-            }
-        }
-        
-
-        // Update bottom row
-        for i in 0..3 {
-            let new_pos: u8 = match (pos + 9 - i) < self.board_size.into() { // overflow when on right most col
-                true => pos + 9 - i,
-                false => continue
-            };
-            let new_pos_u: usize = new_pos.into();
-            let tile = self.board.get(new_pos_u).unwrap();
-            if tile == &0 {
-                for j in 1..3 {
-                    self.check_tile_actions(new_pos, j, debug);
-                }
-            }
-        }
-
     }
 
     /**
@@ -497,6 +491,14 @@ impl Board {
             }
             return actions;
         }
+    }
+
+    fn get_direction(&self) -> u8 {
+        42
+    }
+
+    fn get_perimeter(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.perimeter)
     }
 
     /**
