@@ -116,7 +116,7 @@ impl Board {
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
         // add to board
-        let pos_u: usize = match self.get_available_actions().contains(&pos) {
+        let pos_u: usize = match self.get_available_actions(false, debug).contains(&pos) {
             false => {
                 println!("ERROR: not a valid action");
                 return;
@@ -247,9 +247,15 @@ impl Board {
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
 
-        for action in self.get_available_actions()  {
+        for action in self.get_available_actions(false, debug)  {
             self.check_tile_actions(action, val, debug);
         }
+
+        for action in self.get_available_actions(true, debug)  {
+            self.check_tile_actions(action, val, debug);
+        }
+
+
 
         // alternate turns
         if self.player_turn {
@@ -472,17 +478,23 @@ impl Board {
     }
 
     /**
-     * Returns the IndexSet of available actions depending on which players turn it is
+     * Returns a clone of the IndexSet of available actions depending on which players turn it is
      * 
      * Should only use this function to get the available actions, don't individually
      * reference the player or cpu sets
      */
-    fn get_available_actions(&self) -> IndexSet<u8> {
-        if self.player_turn {
+    fn get_available_actions(&self, inv: bool, debug: bool) -> IndexSet<u8> {
+        if self.player_turn && !inv {
             let actions: IndexSet<u8> = IndexSet::clone(&self.player_available_actions);
+            if debug {
+                println!("Player Available Actions: {:?}", actions);
+            }
             return actions;
         } else {
             let actions: IndexSet<u8> = IndexSet::clone(&self.cpu_available_actions);
+            if debug {
+                println!("CPU Available Actions: {:?}", actions);
+            }
             return actions;
         }
     }
