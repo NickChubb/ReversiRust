@@ -549,20 +549,25 @@ fn convert_2d(s: &str) -> u8{
 /**
  * Recursively solves a puzzle by MCTS
  */
-fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
+fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool) {
+    
+    let actions_size = b.cpu_available_actions.len();
 
-    let actions_size = b.player_available_actions.len();
-
+    println!("CPU calculating {} random playouts", max_steps);
     for i in 0..max_steps {
-
-        let rand_index = rand::thread_rng().gen_range(0, actions_size);
-        let rand_val = b.player_available_actions.get_index(rand_index);
         
-        
+        for action in b.get_available_actions() {
+            let playout = random_playout(action);
+        }
 
-        //monte_carlo_tree_search(b, max_steps, timer)
     }
+}
 
+fn random_playout(action: u8) {
+    println!("action: {}", action);
+
+    // let rand_index = rand::thread_rng().gen_range(0, actions_size);
+    // let rand_val = b.cpu_available_actions.get_index(rand_index);
 }
 
 fn main() {
@@ -596,8 +601,7 @@ fn main() {
             false => 2
         };
         board.ins(res, value, true);
-
-        //monte_carlo_tree_search(board, MAX_STEPS, TIME);
+        monte_carlo_tree_search(board, MAX_STEPS, TIME, true);
 
     }
 
