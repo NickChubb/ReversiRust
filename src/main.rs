@@ -578,6 +578,14 @@ fn toggle_debug(mut debug: bool) -> bool{
     }
 }
 
+fn print_actions(actions: IndexSet<u8>) {
+    print!("\nPlayer's Actions: ");
+    for action in actions {
+        print!("{} ", Style::default().bold().paint(convert_num(action)));
+    }
+    println!("\n");
+}
+
 /**
  * Recursively solves a puzzle by MCTS
  */
@@ -633,6 +641,7 @@ fn main() {
                         continue
                     },
                     "actions\n" => {
+                        print_actions(board.get_player_actions(debug));
                         continue
                     }
                     "exit\n" => break,
