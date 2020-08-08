@@ -577,6 +577,29 @@ fn convert_2d(s: &str) -> u8{
 }
 
 /**
+ * Convert integer vector index into 2d string index
+ * Note: this function is the inverse of convert_2d()
+ * @params:     num: less than 64 valued integer representing 1d index of vector
+ * @returns:    String of values [a-h][1-8]
+ */
+fn convert_num(num: u8) -> String {
+
+    let letter: &str = match num / 8 {
+        0 => "a",
+        1 => "b",
+        2 => "c",
+        3 => "d",
+        4 => "e",
+        5 => "f",
+        6 => "g",
+        7 => "h",
+        _ => "x"
+    };
+
+    format!("{}{}", letter, num % 8 + 1)
+}
+
+/**
  * Recursively solves a puzzle by MCTS
  */
 fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
