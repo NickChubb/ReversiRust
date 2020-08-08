@@ -561,7 +561,11 @@ fn convert_num(num: u8) -> String {
 }
 
 fn print_help() {
-    println!("HELP");
+    println!("\nCommands:\n");
+    println!("  {}  -  print the current available actions", Style::default().bold().paint("actions"));
+    println!("  {}    -  toggles showing debug information", Style::default().bold().paint("debug"));
+    println!("  {}     -  quit the game", Style::default().bold().paint("exit"));
+    println!();
 }
 
 fn toggle_debug(mut debug: bool) -> bool{
@@ -631,9 +635,9 @@ fn main() {
                     "actions\n" => {
                         continue
                     }
-                    "exit\n" | "e\n" => break,
+                    "exit\n" => break,
                     _ => {
-                        println!("ERROR: invalid input"); 
+                        println!("ERROR: invalid input, enter 'help' for command information"); 
                         continue
                     }
 
