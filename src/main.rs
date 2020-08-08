@@ -564,6 +564,16 @@ fn print_help() {
     println!("HELP");
 }
 
+fn toggle_debug(mut debug: bool) -> bool{
+    if debug {
+        println!("Debug turned OFF");
+        false
+    } else {
+        println!("Debug turned ON");
+        true
+    }
+}
+
 /**
  * Recursively solves a puzzle by MCTS
  */
@@ -595,6 +605,8 @@ fn main() {
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
 
+    let mut debug = false;
+
     loop{
 
         board.print(true);
@@ -612,7 +624,14 @@ fn main() {
                         print_help();
                         continue
                     },
-                    "exit\n" => break,
+                    "debug\n" => {
+                        debug = toggle_debug(debug);
+                        continue
+                    },
+                    "actions\n" => {
+                        continue
+                    }
+                    "exit\n" | "e\n" => break,
                     _ => {
                         println!("ERROR: invalid input"); 
                         continue
@@ -626,7 +645,7 @@ fn main() {
             true => 1,
             false => 2
         };
-        board.ins(res, value, true);
+        board.ins(res, value, debug);
 
         //monte_carlo_tree_search(board, MAX_STEPS, TIME);
 
