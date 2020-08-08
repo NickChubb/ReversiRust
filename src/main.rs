@@ -154,89 +154,9 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: u8 = match direction {
-
-                    0 => { // Right
-                        let position = pos + u;
-                        if position % 8 == 0 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    1 => { // Left
-                        let position = match pos.checked_sub(u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        };
-                        if position % 8 == 7 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    2 => { // Down
-                        let position = pos + (u * 8);
-                        if position < self.board_size.into() {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    3 => { // Up
-                        let new_pos = match pos.checked_sub(u * 8) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        new_pos
-                    },
-
-                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 + u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 7 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 - u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 0 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    6 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) - u;
-                        if position < self.board_size.into() && position % 8 != 7 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    7 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) + u;
-                        if position < self.board_size.into() && position % 8 != 0 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    _ => break
+                let new_pos: u8 = match get_new_pos(direction, pos, u, self.board_size) {
+                    None => break,
+                    Some(x) => Some(x).unwrap()
                 };
 
                 let new_pos_usize: usize = new_pos.into();
@@ -271,17 +191,35 @@ impl Board {
                 self.perimeter.insert(new_pos);
             }
         }
-
-        for i in 0..3 {
-            let new_pos: u8 = pos - 1 + i;
-            let new_pos_usize: usize = new_pos.into();
-            if i != 1 {
-                if new_pos < self.board_size {
-                    if self.board.get(new_pos_usize).unwrap() == &0 {
-                        self.perimeter.insert(new_pos);
-                    }
+        
+        match pos.checked_sub(1) {
+            Some(x) => {
+                let new_pos = Some(x).unwrap();
+                let new_pos_usize: usize = Some(x).unwrap().into();
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
                 }
-            }   
+            },
+            None => {
+                if debug {
+                    println!("Overflow, but it's chill, I handled it")
+                }
+            }
+        };
+
+        match pos + 1 < self.board_size {
+            true => {
+                let new_pos = pos + 1;
+                let new_pos_usize: usize = new_pos.into();
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
+                }
+            },
+            false => {
+               if debug {
+                   println!("Overflow, but it's chill, I handled it")
+               }
+            }
         }
 
         for i in 0..3 {
@@ -347,89 +285,9 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: u8 = match direction {
-
-                    0 => { // Right
-                        let position = pos + u;
-                        if position % 8 == 0 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    1 => { // Left
-                        let position = match pos.checked_sub(u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        };
-                        if position % 8 == 7 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    2 => { // Down
-                        let position = pos + (u * 8);
-                        if position < self.board_size.into() {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    3 => { // Up
-                        let new_pos = match pos.checked_sub(u * 8) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        new_pos
-                    },
-
-                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 + u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 7 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 - u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 0 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    6 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) - u;
-                        if position < self.board_size.into() && position % 8 != 7 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    7 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) + u;
-                        if position < self.board_size.into() && position % 8 != 0 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    _ => break
+                let new_pos: u8 = match get_new_pos(direction, pos, u, self.board_size) {
+                    None => break,
+                    Some(x) => Some(x).unwrap()
                 };
 
                 let new_pos_usize: usize = new_pos.into();
@@ -535,6 +393,109 @@ impl Board {
         self.player_available_actions.insert(pos);
     }
     
+}
+
+/** 
+ * Returns a new position based on direction, initial pos, iteration, and board size
+ * Intended to be used in a loop (such as in the Board.ins() function)
+ * 
+ * @returns: Some(x) if new position is on board, or
+ * @returns: None if position overflows board
+ */
+fn get_new_pos(dir: u8, pos: u8, iter: u8, size: u8) -> Option<u8> {
+    let new_pos: Option<u8> = match dir {
+
+        0 => { // Right
+            let position = pos + iter;
+            if position % 8 == 0 {
+                None
+            } else {
+                Some(position)
+            }
+        },
+
+        1 => { // Left
+            let position = match pos.checked_sub(iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 == 7 {
+                        None
+                    } else {
+                        Some(x)
+                    }
+                }
+            };
+            position
+        },
+
+        2 => { // Down
+            let position = pos + (iter * 8);
+            if position < size {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        3 => { // Up
+            let new_pos = match pos.checked_sub(iter * 8) {
+                None => None,
+                Some(x) => Some(x)
+            };
+            new_pos
+        },
+
+        4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
+            let new_pos = match pos.checked_sub(iter * 8 + iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 != 7 {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            }; 
+            new_pos
+        },
+
+        5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
+            let new_pos = match pos.checked_sub(iter * 8 - iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 != 0 {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            };
+            new_pos
+            
+        },
+
+        6 => { // Down left: must check that doesnt % 8 = 7 and 
+            let position = pos + (iter * 8) - iter;
+            if position < size && position % 8 != 7 {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        7 => { // Down left: must check that doesnt % 8 = 7 and 
+            let position = pos + (iter * 8) + iter;
+            if position < size && position % 8 != 0 {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        _ => None
+    };
+
+    new_pos
 }
 
 /**
