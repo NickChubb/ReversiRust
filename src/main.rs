@@ -560,6 +560,10 @@ fn convert_num(num: u8) -> String {
     format!("{}{}", letter, num % 8 + 1)
 }
 
+fn print_help() {
+    println!("HELP");
+}
+
 /**
  * Recursively solves a puzzle by MCTS
  */
@@ -602,7 +606,20 @@ fn main() {
 
         let res: u8 = match re.is_match(&input) {
             true => convert_2d(&input),
-            false => {println!("ERROR: invalid input"); continue},
+            false => {
+                match input.as_str() {
+                    "help\n" => {
+                        print_help();
+                        continue
+                    },
+                    "exit\n" => break,
+                    _ => {
+                        println!("ERROR: invalid input"); 
+                        continue
+                    }
+
+                };
+            },
         };
         
         let value = match board.player_turn {
