@@ -370,16 +370,17 @@ impl Board {
         }
     }
 
+    // Returns true if game has ended, and false otherwise
+    fn check_game_state(&self) -> bool {
+        return false;
+    }
+
     fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.player_available_actions)
     }
 
     fn get_cpu_actions(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.cpu_available_actions)
-    }
-
-    fn get_direction(&self) -> u8 {
-        42  
     }
 
     /**
@@ -600,11 +601,6 @@ fn print_actions(actions: IndexSet<u8>) {
     println!("\n");
 }
 
-// Returns true if game has ended, and false otherwise
-fn check_game_state(b: &Board) -> bool {
-    return true;
-}
-
 /**
  * Recursively solves a puzzle by MCTS
  */
@@ -669,9 +665,14 @@ fn main() {
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
 
-    let mut debug = false;
+    let mut debug = true;
 
     loop{
+
+        if board.check_game_state() == true {
+            println!("Game has ended");
+            break;
+        }
 
         board.print(true);
 
@@ -683,7 +684,7 @@ fn main() {
             match re.is_match(&input) {
                 true => {
                     let input_u8: u8 = convert_2d(&input);
-                    board.ins(input_u8, 1, true);
+                    board.ins(input_u8, 1, debug);
                 }
                 false => {
                     match input.as_str() {
@@ -711,9 +712,9 @@ fn main() {
         }
 
         else {
-            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, true);
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
             println!("CPU found {} as best play", best_play);
-            board.ins(best_play, 2, true)
+            board.ins(best_play, 2, debug)
         }     
 
 
