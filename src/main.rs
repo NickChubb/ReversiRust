@@ -83,6 +83,20 @@ impl Board {
         }
     }
 
+    // fn copy(b: &Board) -> Board {
+
+    //     Board {
+    //         width: b.width,
+    //         height: b.height,
+    //         board_size: b.board_size,
+    //         board: b.board,
+    //         perimeter: b.perimeter,
+    //         player_available_actions: b.player_available_actions,
+    //         cpu_available_actions: b.cpu_available_actions,
+    //         player_turn: b.player_turn // Player always takes the first turn
+    //     }
+    // }
+
     /**
      * Print the board vec to the screen
      * 
@@ -586,22 +600,60 @@ fn print_actions(actions: IndexSet<u8>) {
     println!("\n");
 }
 
+// Returns true if game has ended, and false otherwise
+fn check_game_state(b: &Board) -> bool {
+    return true;
+}
+
 /**
  * Recursively solves a puzzle by MCTS
  */
-fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize) {
+ fn monte_carlo_tree_search(b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
+    
+    
+    let test = 20;
+    let mut stats: [u8; 3] = [0; 3];
+    
 
-    let actions_size = b.player_available_actions.len();
-
+    println!("CPU calculating {} random playouts", max_steps);
     for i in 0..max_steps {
-
-        let rand_index = rand::thread_rng().gen_range(0, actions_size);
-        let rand_val = b.player_available_actions.get_index(rand_index);
         
-        
+        for action in b.get_available_actions(true) {
+            let playout = random_playout(b, action, &stats);
+        }
 
-        //monte_carlo_tree_search(b, max_steps, timer)
     }
+
+    return test;
+}
+
+fn random_playout(b: &Board, action: u8, stats: &[u8; 3]) {
+    let playout_board = b.clone();
+    let counter = 0;
+    println!("action: {}", action);
+
+    // while !check_game_state(&playout_board) {
+    //     if counter % 2 == 0 { // even: CPU's Turn
+    //         let actions_size = playout_board.cpu_available_actions.len();
+    //         let rand_index = rand::thread_rng().gen_range(0, actions_size);
+    //         let rand_val = playout_board.cpu_available_actions.get_index(rand_index).unwrap();
+    //         playout_board.ins(*rand_val, 2, true)
+    //     }
+        
+    //     else { // odd: Player's Turn
+    //         let actions_size = playout_board.player_available_actions.len();
+    //         let rand_index = rand::thread_rng().gen_range(0, actions_size);
+    //         let rand_val = playout_board.player_available_actions.get_index(rand_index).unwrap();
+    //         playout_board.ins(*rand_val, 1, true)
+    //     }
+
+    // }
+    
+
+
+}
+
+fn user_input() {
 
 }
 
@@ -609,7 +661,7 @@ fn main() {
     
     println!("\nPlay a game of Reversi against AI!");
 
-    const MAX_STEPS: usize = 100;
+    const MAX_STEPS: usize = 5;
     const TIME: usize = 5;
 
     let width = 8;
@@ -623,44 +675,47 @@ fn main() {
 
         board.print(true);
 
-        println!("Place piece at position: ");
+        if board.player_turn == true {
+            println!("Place piece at position: ");
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).expect("Failed to read line");
+            
+            match re.is_match(&input) {
+                true => {
+                    let input_u8: u8 = convert_2d(&input);
+                    board.ins(input_u8, 1, true);
+                }
+                false => {
+                    match input.as_str() {
+                        "help\n" => {
+                            print_help();
+                            continue
+                        },
+                        "debug\n" => {
+                            debug = toggle_debug(debug);
+                            continue
+                        },
+                        "actions\n" => {
+                            print_actions(board.get_player_actions(debug));
+                            continue
+                        }
+                        "exit\n" => break,
+                        _ => {
+                            println!("ERROR: invalid input, enter 'help' for command information"); 
+                            continue
+                        }
+    
+                    };
+                }
+            };
+        }
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
+        else {
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, true);
+            println!("CPU found {} as best play", best_play);
+            board.ins(best_play, 2, true)
+        }     
 
-        let res: u8 = match re.is_match(&input) {
-            true => convert_2d(&input),
-            false => {
-                match input.as_str() {
-                    "help\n" => {
-                        print_help();
-                        continue
-                    },
-                    "debug\n" => {
-                        debug = toggle_debug(debug);
-                        continue
-                    },
-                    "actions\n" => {
-                        print_actions(board.get_player_actions(debug));
-                        continue
-                    }
-                    "exit\n" => break,
-                    _ => {
-                        println!("ERROR: invalid input, enter 'help' for command information"); 
-                        continue
-                    }
 
-                };
-            },
-        };
-        
-        let value = match board.player_turn {
-            true => 1,
-            false => 2
-        };
-        board.ins(res, value, debug);
-
-        //monte_carlo_tree_search(board, MAX_STEPS, TIME);
-
-    }
+    } // loop
 }
