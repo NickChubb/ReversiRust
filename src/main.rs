@@ -365,7 +365,7 @@ impl Board {
     }
 
     fn get_direction(&self) -> u8 {
-        42
+        42  
     }
 
     /**
@@ -546,14 +546,14 @@ fn convert_2d(s: &str) -> u8{
 fn convert_num(num: u8) -> String {
 
     let letter: &str = match num / 8 {
-        0 => "a",
-        1 => "b",
-        2 => "c",
-        3 => "d",
-        4 => "e",
-        5 => "f",
-        6 => "g",
-        7 => "h",
+        0 => "A",
+        1 => "B",
+        2 => "C",
+        3 => "D",
+        4 => "E",
+        5 => "F",
+        6 => "G",
+        7 => "H",
         _ => "x"
     };
 
@@ -663,5 +663,4 @@ fn main() {
         //monte_carlo_tree_search(board, MAX_STEPS, TIME);
 
     }
-
 }
