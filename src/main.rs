@@ -2,10 +2,14 @@ use std::io;
 use rand::Rng;
 use regex::Regex;
 
+use std::collections::HashMap;
+
 // IndexSet provides an indexed HashSet to allow returning element by index
 // Used for getting random items from set in O(1) time so MCTS is more efficient
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
+
+
 
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
@@ -686,10 +690,21 @@ fn print_actions(actions: IndexSet<u8>) {
                 _ => continue
             };
         }
-
     }
 
-    test
+    // sum actions in stats 
+
+    let mut a = HashMap::new();
+
+    for i in stats[0] {
+        if a.contains_key(&i) {
+            a[&i] += 1;
+        } else {
+            a[&i] = 1;
+        }
+    }
+
+    *(a.iter().max_by_key(|entry | entry.1).unwrap().0)
 }
 
 fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
