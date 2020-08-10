@@ -2,6 +2,7 @@ use std::io;
 use rand::Rng;
 use regex::Regex;
 
+// HashMap is used in order to assign a count to each element inside win/draw/loss stats
 use std::collections::HashMap;
 
 // IndexSet provides an indexed HashSet to allow returning element by index
@@ -9,7 +10,8 @@ use std::collections::HashMap;
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
 
-
+// Used to limit MCTS duration
+use std::time::{Duration, Instant};
 
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
@@ -102,22 +104,6 @@ impl Board {
 
         new_board
     }
-
-    // fn copy(b: &Board) -> Board {
-
-
-
-    //     Board {
-    //         width: b.width,
-    //         height: b.height,
-    //         board_size: b.board_size,
-    //         board: b.board,
-    //         perimeter: b.perimeter,
-    //         player_available_actions: b.player_available_actions,
-    //         cpu_available_actions: b.cpu_available_actions,
-    //         player_turn: b.player_turn // Player always takes the first turn
-    //     }
-    // }
 
     /**
      * Print the board vec to the screen
@@ -659,12 +645,36 @@ fn convert_num(num: u8) -> String {
     format!("{}{}", letter, num % 8 + 1)
 }
 
+fn print_title() {
+    println!("################################################################");
+    println!("#                                                              #");
+    println!("#                {}                #", Style::default().bold().paint("Welcome to Reversi against AI!"));
+    println!("#                                                              #");
+    println!("################################################################\n\n");
+}
+
 fn print_help() {
     println!("\nCommands:\n");
     println!("  {}  -  print the current available actions", Style::default().bold().paint("actions"));
+    println!("  {}  -  show game rules", Style::default().bold().paint("rules"));
     println!("  {}    -  toggles showing debug information", Style::default().bold().paint("debug"));
     println!("  {}     -  quit the game", Style::default().bold().paint("exit"));
     println!();
+}
+
+fn print_actions(actions: IndexSet<u8>) {
+    print!("\nPlayer's Actions: ");
+    for action in actions {
+        print!("{} ", Style::default().bold().paint(convert_num(action)));
+    }
+    println!("\n");
+}
+
+fn print_rules(){
+    println!("      #                {}                #\n", Style::default().bold().paint("REVERSI RULES"));
+    println!(" * {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
+    println!(" * The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
+    println!(" * The game ends when either player cannot play a piece or the\n board is full.  The player with the most tiles wins.\n");
 }
 
 fn toggle_debug(mut debug: bool) -> bool{
@@ -677,52 +687,29 @@ fn toggle_debug(mut debug: bool) -> bool{
     }
 }
 
-fn print_actions(actions: IndexSet<u8>) {
-    print!("\nPlayer's Actions: ");
-    for action in actions {
-        print!("{} ", Style::default().bold().paint(convert_num(action)));
-    }
-    println!("\n");
-}
-
-fn print_rules(){
-
-    println!("################################################################");
-    println!("#                                                              #");
-    println!("#                {}                #", Style::default().bold().paint("Welcome to Reversi against AI!"));
-    println!("#                                                              #");
-    println!("################################################################\n");
-    println!(" {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
-    println!(" The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
-    println!(" The game ends when either player cannot play a piece or the\nboard is full.  The player with the most tiles wins.\n");
-
-}
-
-
 /**
  * Simplified Monte Carlo Tree Search which performs random playouts until completion 
  * and records the win/draw/loss statistics for each available action at current board state.
  *  Parameters:
  *      b              -    the current board state to initialize the playout board
  *      max_steps      -    maximum number of iterations 
- *      timer          -    maximum amount of time to spend during the mcts
+ *      timer          -    maximum amount of time to spend during the mcts in seconds
  *      debug          -    used to print extra debug statements
  * 
  */
  fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
 
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
-
-    let start_time = timer::Timer::new();
-
-    println!("CPU calculating {} random playouts", max_steps);
+    let start_time = Instant::now();
+    
+    println!("CPU calculating {} random playouts...", max_steps);
+    
     for i in 0..max_steps {
-
+        if start_time.elapsed() > Duration::new(timer as u64, 0) { break }
+        
         let actions = b.get_available_actions(debug);
 
-        if debug {
-            println!("{:?}", actions);
-        }
+        if debug { println!("{:?}", actions); }
         
         for action in actions {
 
@@ -737,16 +724,8 @@ fn print_rules(){
         }
     }
 
-    // sum actions in stats 
-
-    if debug {
-        println!("Player wins: {:?}", stats[1]);
-        println!("CPU wins: {:?}", stats[0]);
-        println!("Draws: {:?}", stats[2]);
-    }
-
+    // Populate hashmap with frequency of elements in win list
     let mut a = HashMap::new();
-
     for i in stats[0].iter() {
         if a.contains_key(i) {
             *(a.get_mut(&i).unwrap()) += 1;
@@ -756,25 +735,31 @@ fn print_rules(){
     }
 
     if debug {
+        println!("Player wins: {:?}", stats[1]);
+        println!("CPU wins: {:?}", stats[0]);
+        println!("Draws: {:?}", stats[2]);
         for (pos, wins) in &a {
             println!("{}: {}", pos, wins);
         } 
     }
 
+    // Returns the highest value in frequency hashmap as best play
     **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
-fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
-    
-    let counter = 0;
-    if debug {
-        println!("action: {}", action);
-    }
 
+/**
+*   Performs random playouts 
+*/
+fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8 {
+    
+    if debug { println!("Playing action: {}", action); }
+
+    // Play a game until completion
     loop {
         match b.check_game_state(debug) {
-            0 => {
-                if !b.player_turn { // even: CPU's Turn
+            0 => { // Game not done
+                if !b.player_turn { 
                     let actions = b.get_cpu_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -782,7 +767,7 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     b.ins(*rand_val, 2, debug);
                 }
 
-                else { // odd: Player's Turn
+                else {
                     let actions = b.get_player_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -790,35 +775,74 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     b.ins(*rand_val, 1, debug);     
                 }
 
-                if debug {
-                    b.print(debug);
-                }
-
+                if debug { b.print(debug); }
                 continue;
-            }, // Not completed
-            1 => return 1,
-            2 => return 2,
-            3 => return 3,
-            _ => 42
+            },
+            1 => return 1, // Player Wins
+            2 => return 2, // CPU Wins
+            3 => return 3, // Draw
+            _ => return 42
         };
     }
 }
 
 
+fn initial_user_input() -> (std::string::String, std::string::String, std::string::String) {
+
+    println!("Select a Game Mode: ");
+    println!("[1] Player VS CPU");
+    println!("[2] CPU VS CPU\n");
+    let mut mode = String::new();
+    let mut cpu_diff = [String::new(), String::new()];
+
+    io::stdin().read_line(&mut mode).expect("Failed to read line");
+    match mode.as_str().trim() {
+        "1" => {
+            println!("Select CPU Difficulty: ");
+            println!("[1] Easy");
+            println!("[2] Hard\n");
+            io::stdin().read_line(&mut cpu_diff[0]).expect("Failed to read line");
+        },
+        "2" => {
+            for i in 0..2 {
+                println!("Select CPU-{} Difficulty: ", i + 1);
+                println!("[1] Easy");
+                println!("[2] Hard\n");
+                io::stdin().read_line(&mut cpu_diff[i]).expect("Failed to read line");
+            }
+        }
+        _ => println!("Invalid input. Expected integer 1 or 2")
+    };
+
+    (mode.trim().to_string(), cpu_diff[0].trim().to_string(), cpu_diff[1].trim().to_string())
+}
 
 fn main() {
     
-    println!("\nPlay a game of Reversi against AI!");
+    print_title();
+    print_rules();
+    let game_settings = initial_user_input();
+    println!("Mode: {} CPU-1 Diff: {} CPU-2 Diff: {}", game_settings.0, game_settings.1, game_settings.2);
 
-    const MAX_STEPS: usize = 10;
+
+    const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
 
     let width = 8;
     let height = 8;
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
-
     let mut debug = true;
+
+    // Player VS CPU
+    if game_settings.0 == "1" {
+        
+    }
+
+    // CPU VS CPU
+    else {
+
+    }
 
     loop{
 
@@ -845,19 +869,17 @@ fn main() {
             let mut input = String::new();
             io::stdin().read_line(&mut input).expect("Failed to read line");
             
+            // Validate input string
             match re.is_match(&input) {
                 true => {
                     let input_u8: u8 = convert_2d(&input);
                     board.ins(input_u8, 1, debug);
-                }
+                },
+
                 false => {
                     match input.as_str() {
                         "help\n" => {
                             print_help();
-                            continue;
-                        },
-                        "debug\n" => {
-                            debug = toggle_debug(debug);
                             continue;
                         },
                         "actions\n" => {
@@ -868,6 +890,10 @@ fn main() {
                             print_rules();
                             continue;
                         }
+                        "debug\n" => {
+                            debug = toggle_debug(debug);
+                            continue;
+                        },
                         "exit\n" => break,
                         _ => {
                             println!("ERROR: invalid input, enter 'help' for command information"); 
