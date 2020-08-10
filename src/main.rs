@@ -171,7 +171,6 @@ impl Board {
         let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
                 println!("ERROR: {} is not a valid action", pos);
-                self.player_turn = !self.player_turn;
                 return;
             },
             true => pos.into()
