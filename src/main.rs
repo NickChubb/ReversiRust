@@ -105,22 +105,6 @@ impl Board {
         new_board
     }
 
-    // fn copy(b: &Board) -> Board {
-
-
-
-    //     Board {
-    //         width: b.width,
-    //         height: b.height,
-    //         board_size: b.board_size,
-    //         board: b.board,
-    //         perimeter: b.perimeter,
-    //         player_available_actions: b.player_available_actions,
-    //         cpu_available_actions: b.cpu_available_actions,
-    //         player_turn: b.player_turn // Player always takes the first turn
-    //     }
-    // }
-
     /**
      * Print the board vec to the screen
      * 
@@ -661,22 +645,21 @@ fn convert_num(num: u8) -> String {
     format!("{}{}", letter, num % 8 + 1)
 }
 
+fn print_title() {
+    println!("################################################################");
+    println!("#                                                              #");
+    println!("#                {}                #", Style::default().bold().paint("Welcome to Reversi against AI!"));
+    println!("#                                                              #");
+    println!("################################################################\n\n");
+}
+
 fn print_help() {
     println!("\nCommands:\n");
     println!("  {}  -  print the current available actions", Style::default().bold().paint("actions"));
+    println!("  {}  -  show game rules", Style::default().bold().paint("rules"));
     println!("  {}    -  toggles showing debug information", Style::default().bold().paint("debug"));
     println!("  {}     -  quit the game", Style::default().bold().paint("exit"));
     println!();
-}
-
-fn toggle_debug(mut debug: bool) -> bool{
-    if debug {
-        println!("Debug turned OFF");
-        false
-    } else {
-        println!("Debug turned ON");
-        true
-    }
 }
 
 fn print_actions(actions: IndexSet<u8>) {
@@ -688,18 +671,21 @@ fn print_actions(actions: IndexSet<u8>) {
 }
 
 fn print_rules(){
-
-    println!("################################################################");
-    println!("#                                                              #");
-    println!("#                {}                #", Style::default().bold().paint("Welcome to Reversi against AI!"));
-    println!("#                                                              #");
-    println!("################################################################\n");
-    println!(" {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
-    println!(" The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
-    println!(" The game ends when either player cannot play a piece or the\nboard is full.  The player with the most tiles wins.\n");
-
+    println!("      #                {}                #\n", Style::default().bold().paint("REVERSI RULES"));
+    println!(" * {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
+    println!(" * The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
+    println!(" * The game ends when either player cannot play a piece or the\n board is full.  The player with the most tiles wins.\n");
 }
 
+fn toggle_debug(mut debug: bool) -> bool{
+    if debug {
+        println!("Debug turned OFF");
+        false
+    } else {
+        println!("Debug turned ON");
+        true
+    }
+}
 
 /**
  * Simplified Monte Carlo Tree Search which performs random playouts until completion 
@@ -723,7 +709,7 @@ fn print_rules(){
         
         let actions = b.get_available_actions(debug);
 
-        if debug { println!("{:?}", actions) }
+        if debug { println!("{:?}", actions); }
         
         for action in actions {
 
@@ -761,17 +747,19 @@ fn print_rules(){
     **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
+
+/**
+*   Performs random playouts 
+*/
 fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
     
-    let counter = 0;
-    if debug {
-        println!("action: {}", action);
-    }
+    if debug { println!("Playing action: {}", action); }
 
+    // Play a game until completion
     loop {
         match b.check_game_state(debug) {
-            0 => {
-                if !b.player_turn { // even: CPU's Turn
+            0 => { // Game not done
+                if !b.player_turn { 
                     let actions = b.get_cpu_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -779,7 +767,7 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     b.ins(*rand_val, 2, debug);
                 }
 
-                else { // odd: Player's Turn
+                else {
                     let actions = b.get_player_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -787,16 +775,13 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     b.ins(*rand_val, 1, debug);     
                 }
 
-                if debug {
-                    b.print(debug);
-                }
-
+                if debug { b.print(debug); }
                 continue;
-            }, // Not completed
-            1 => return 1,
-            2 => return 2,
-            3 => return 3,
-            _ => 42
+            },
+            1 => return 1, // Player Wins
+            2 => return 2, // CPU Wins
+            3 => return 3, // Draw
+            _ => return 42
         };
     }
 }
@@ -804,7 +789,8 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
 
 fn main() {
     
-    println!("\nPlay a game of Reversi against AI!");
+    print_title();
+    print_rules();
 
     const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
@@ -813,7 +799,6 @@ fn main() {
     let height = 8;
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
-
     let mut debug = true;
 
     loop{
@@ -841,19 +826,17 @@ fn main() {
             let mut input = String::new();
             io::stdin().read_line(&mut input).expect("Failed to read line");
             
+            // Validate input string
             match re.is_match(&input) {
                 true => {
                     let input_u8: u8 = convert_2d(&input);
                     board.ins(input_u8, 1, debug);
-                }
+                },
+
                 false => {
                     match input.as_str() {
                         "help\n" => {
                             print_help();
-                            continue;
-                        },
-                        "debug\n" => {
-                            debug = toggle_debug(debug);
                             continue;
                         },
                         "actions\n" => {
@@ -864,6 +847,10 @@ fn main() {
                             print_rules();
                             continue;
                         }
+                        "debug\n" => {
+                            debug = toggle_debug(debug);
+                            continue;
+                        },
                         "exit\n" => break,
                         _ => {
                             println!("ERROR: invalid input, enter 'help' for command information"); 
