@@ -442,7 +442,7 @@ impl Board {
             }
 
             if debug {
-                //println!("  Player: {}, CPU: {}", count_player, count_cpu);
+                println!("  Player: {}, CPU: {}", Red.paint(count_player.to_string()), Green.paint(count_cpu.to_string()));
             }
             
             if count_player > count_cpu {
