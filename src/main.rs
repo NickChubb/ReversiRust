@@ -2,6 +2,7 @@ use std::io;
 use rand::Rng;
 use regex::Regex;
 
+// HashMap is used in order to assign a count to each element inside win/draw/loss stats
 use std::collections::HashMap;
 
 // IndexSet provides an indexed HashSet to allow returning element by index
@@ -9,7 +10,8 @@ use std::collections::HashMap;
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
 
-
+// Used to limit MCTS duration
+use std::time::{Duration, Instant};
 
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
@@ -705,24 +707,23 @@ fn print_rules(){
  *  Parameters:
  *      b              -    the current board state to initialize the playout board
  *      max_steps      -    maximum number of iterations 
- *      timer          -    maximum amount of time to spend during the mcts
+ *      timer          -    maximum amount of time to spend during the mcts in seconds
  *      debug          -    used to print extra debug statements
  * 
  */
  fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
 
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
-
-    let start_time = timer::Timer::new();
-
-    println!("CPU calculating {} random playouts", max_steps);
+    let start_time = Instant::now();
+    
+    println!("CPU calculating {} random playouts...", max_steps);
+    
     for i in 0..max_steps {
-
+        if start_time.elapsed() > Duration::new(timer as u64, 0) { break }
+        
         let actions = b.get_available_actions(debug);
 
-        if debug {
-            println!("{:?}", actions);
-        }
+        if debug { println!("{:?}", actions) }
         
         for action in actions {
 
@@ -737,16 +738,8 @@ fn print_rules(){
         }
     }
 
-    // sum actions in stats 
-
-    if debug {
-        println!("Player wins: {:?}", stats[1]);
-        println!("CPU wins: {:?}", stats[0]);
-        println!("Draws: {:?}", stats[2]);
-    }
-
+    // Populate hashmap with frequency of elements in win list
     let mut a = HashMap::new();
-
     for i in stats[0].iter() {
         if a.contains_key(i) {
             *(a.get_mut(&i).unwrap()) += 1;
@@ -756,11 +749,15 @@ fn print_rules(){
     }
 
     if debug {
+        println!("Player wins: {:?}", stats[1]);
+        println!("CPU wins: {:?}", stats[0]);
+        println!("Draws: {:?}", stats[2]);
         for (pos, wins) in &a {
             println!("{}: {}", pos, wins);
         } 
     }
 
+    // Returns the highest value in frequency hashmap as best play
     **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
@@ -805,12 +802,11 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
 }
 
 
-
 fn main() {
     
     println!("\nPlay a game of Reversi against AI!");
 
-    const MAX_STEPS: usize = 10;
+    const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
 
     let width = 8;
