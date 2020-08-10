@@ -170,7 +170,8 @@ impl Board {
         // add to board
         let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
-                println!("ERROR: not a valid action");
+                println!("ERROR: {} is not a valid action", pos);
+                self.player_turn = !self.player_turn;
                 return;
             },
             true => pos.into()
@@ -439,6 +440,10 @@ impl Board {
                     _ => println!("Error Code: ID10T" )
                 }
             }
+
+            if debug {
+                //println!("  Player: {}, CPU: {}", count_player, count_cpu);
+            }
             
             if count_player > count_cpu {
                 1
@@ -667,21 +672,6 @@ fn print_actions(actions: IndexSet<u8>) {
 /**
  * Recursively solves a puzzle by MCTS
  */
-<<<<<<< HEAD
-fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool) {
-    
-    let actions_size = b.cpu_available_actions.len();
-
-    println!("CPU calculating {} random playouts", max_steps);
-    for i in 0..max_steps {
-        
-        for action in b.get_available_actions() {
-            let playout = random_playout(action);
-        }
-
-    }
-}
-=======
  fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
     
     let test = 20;
@@ -696,6 +686,10 @@ fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool
         let mut playout_board: Board = b.clone(); // After calling b.clone(), don't use b in this scope
 
         let actions = playout_board.get_available_actions(debug);
+
+        if debug {
+            println!("{:?}", actions);
+        }
         
         for action in actions {
             match random_playout(&mut playout_board, action, debug) {
@@ -711,15 +705,15 @@ fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool
 
     let mut a = HashMap::new();
 
-    for i in stats[0] {
-        if a.contains_key(&i) {
-            a[&i] += 1;
+    for i in stats[0].iter() {
+        if a.contains_key(i) {
+            *(a.get_mut(&i).unwrap()) += 1;
         } else {
-            a[&i] = 1;
+            a.insert(i, 1);
         }
     }
 
-    *(a.iter().max_by_key(|entry | entry.1).unwrap().0)
+    **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
 fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
@@ -729,8 +723,8 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
 
     loop {
         match b.check_game_state(debug) {
-            0 => { 
-                if counter % 2 == 0 { // even: CPU's Turn
+            0 => {
+                if !b.player_turn { // even: CPU's Turn
                     let actions = b.get_cpu_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -745,6 +739,11 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     let rand_val = actions.get_index(rand_index).unwrap();
                     b.ins(*rand_val, 1, debug);     
                 }
+
+                if debug {
+                    b.print(debug);
+                }
+
                 continue;
             }, // Not completed
             1 => 1,
@@ -755,15 +754,7 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
     }
 }
 
-fn user_input() {
->>>>>>> 2b8a589a19733b813f924c85e9165df96a3602ef
 
-fn random_playout(action: u8) {
-    println!("action: {}", action);
-
-    // let rand_index = rand::thread_rng().gen_range(0, actions_size);
-    // let rand_val = b.cpu_available_actions.get_index(rand_index);
-}
 
 fn main() {
     
@@ -786,19 +777,6 @@ fn main() {
             break;
         }
 
-<<<<<<< HEAD
-        let res: u8 = match re.is_match(&input) {
-            true => convert_2d(&input),
-            false => {println!("ERROR: invalid input"); continue},
-        };
-        
-        let value = match board.player_turn {
-            true => 1,
-            false => 2
-        };
-        board.ins(res, value, true);
-        monte_carlo_tree_search(board, MAX_STEPS, TIME, true);
-=======
         board.print(true);
 
         if board.is_player_turn() == true {
@@ -835,7 +813,6 @@ fn main() {
                 }
             };
         }
->>>>>>> 2b8a589a19733b813f924c85e9165df96a3602ef
 
         else {
             let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
