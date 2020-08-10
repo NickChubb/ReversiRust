@@ -388,11 +388,6 @@ impl Board {
         }
     }
 
-    // Returns true if game has ended, and false otherwise
-    fn check_game_state(&self) -> bool {
-        return false;
-    }
-
     fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.player_available_actions)
     }
