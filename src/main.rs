@@ -421,7 +421,7 @@ impl Board {
         let cpu_actions = self.get_cpu_actions(debug);
 
         // GAME ENDED
-        if cpu_actions.len() == 0 && player_actions.len() == 0 {
+        if cpu_actions.len() == 0 || player_actions.len() == 0 {
             
             // 0 incomplete
             // 1 player win
@@ -703,6 +703,12 @@ fn print_actions(actions: IndexSet<u8>) {
 
     // sum actions in stats 
 
+    if debug {
+        println!("Player wins: {:?}", stats[0]);
+        println!("CPU wins: {:?}", stats[1]);
+        println!("Draws: {:?}", stats[2]);
+    }
+
     let mut a = HashMap::new();
 
     for i in stats[0].iter() {
@@ -713,13 +719,21 @@ fn print_actions(actions: IndexSet<u8>) {
         }
     }
 
+    if debug {
+        for (pos, wins) in &a {
+            println!("{}: {}", pos, wins);
+        } 
+    }
+
     **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
 fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
     
     let counter = 0;
-    println!("action: {}", action);
+    if debug {
+        println!("action: {}", action);
+    }
 
     loop {
         match b.check_game_state(debug) {
@@ -746,9 +760,9 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
 
                 continue;
             }, // Not completed
-            1 => 1,
-            2 => 2,
-            3 => 3,
+            1 => return 1,
+            2 => return 2,
+            3 => return 3,
             _ => 42
         };
     }
@@ -760,7 +774,7 @@ fn main() {
     
     println!("\nPlay a game of Reversi against AI!");
 
-    const MAX_STEPS: usize = 5;
+    const MAX_STEPS: usize = 10;
     const TIME: usize = 5;
 
     let width = 8;
