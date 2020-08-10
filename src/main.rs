@@ -745,7 +745,7 @@ fn main() {
 
     loop{
 
-        if board.check_game_state() == true {
+        if board.check_game_state(debug) != 0 {
             println!("Game has ended");
             break;
         }
