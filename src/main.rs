@@ -2,10 +2,14 @@ use std::io;
 use rand::Rng;
 use regex::Regex;
 
+use std::collections::HashMap;
+
 // IndexSet provides an indexed HashSet to allow returning element by index
 // Used for getting random items from set in O(1) time so MCTS is more efficient
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
+
+
 
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
@@ -123,10 +127,12 @@ impl Board {
      */
     fn print(&self, debug: bool) {
 
+        let (player_score, cpu_score): (u8, u8) = self.get_score();
+
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
         let mut count = 0;
-        for i in self.board.iter(){
+        for i in self.board.iter() {
             if count % self.width == 0 {
                 if count != 0 {
                     let row_num: u8 = count / 8;
@@ -142,18 +148,17 @@ impl Board {
             } else {
                 if self.player_available_actions.contains(&count) {
                     print!("{} ", Style::default().bold().paint("*"));
-                } else {
-                    if debug && self.cpu_available_actions.contains(&count) {
-                        print!("{} ", Style::default().bold().paint("+"));
-                    } else {
-                        print!("- ");
-                    }
-                    
+                } else { 
+                    print!("- "); 
                 }
             }
             count += 1; 
         }
         print!("{}\n\n", Style::default().bold().paint("8"));
+
+        println!("     Player: {}, CPU: {}", Red.paint(player_score.to_string()), Green.paint(cpu_score.to_string()));
+
+        print_actions(self.get_player_actions(debug));
     }
 
     /**
@@ -166,7 +171,7 @@ impl Board {
         // add to board
         let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
-                println!("ERROR: not a valid action");
+                println!("ERROR: {} is not a valid action", pos);
                 return;
             },
             true => pos.into()
@@ -416,7 +421,7 @@ impl Board {
         let cpu_actions = self.get_cpu_actions(debug);
 
         // GAME ENDED
-        if cpu_actions.len() == 0 && player_actions.len() == 0 {
+        if cpu_actions.len() == 0 || player_actions.len() == 0 {
             
             // 0 incomplete
             // 1 player win
@@ -435,18 +440,38 @@ impl Board {
                     _ => println!("Error Code: ID10T" )
                 }
             }
+
+            if debug {
+                println!("  Player: {}, CPU: {}", Red.paint(count_player.to_string()), Green.paint(count_cpu.to_string()));
+            }
             
             if count_player > count_cpu {
-                1
+                return 1;
             } else if count_cpu > count_player {
-                2
+                return 2;
             } else {
-                3
+                return 3;
             }
         }
 
         else { 0 }
     
+    }
+
+    fn get_score(&self) -> (u8, u8) {
+        let mut count_player = 0;
+        let mut count_cpu = 0;
+
+        for i in 0..64 {
+            match self.board.get(i).unwrap() {
+                0 => continue,
+                1 => count_player += 1,
+                2 => count_cpu += 1,
+                _ => println!("Error Code: ID10T" )
+            }
+        }
+
+        (count_player, count_cpu)
     }
 
     /**
@@ -660,25 +685,49 @@ fn print_actions(actions: IndexSet<u8>) {
     println!("\n");
 }
 
+fn print_rules(){
+
+    println!("################################################################");
+    println!("#                                                              #");
+    println!("#                {}                #", Style::default().bold().paint("Welcome to Reversi against AI!"));
+    println!("#                                                              #");
+    println!("################################################################\n");
+    println!(" {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
+    println!(" The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
+    println!(" The game ends when either player cannot play a piece or the\nboard is full.  The player with the most tiles wins.\n");
+
+}
+
+
 /**
- * Recursively solves a puzzle by MCTS
+ * Simplified Monte Carlo Tree Search which performs random playouts until completion 
+ * and records the win/draw/loss statistics for each available action at current board state.
+ *  Parameters:
+ *      b              -    the current board state to initialize the playout board
+ *      max_steps      -    maximum number of iterations 
+ *      timer          -    maximum amount of time to spend during the mcts
+ *      debug          -    used to print extra debug statements
+ * 
  */
  fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
-    
-    let test = 20;
-    let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
-    //let mut playout_board: Board = *b.clone();
 
-    
+    let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
+
+    let start_time = timer::Timer::new();
 
     println!("CPU calculating {} random playouts", max_steps);
     for i in 0..max_steps {
 
-        let mut playout_board: Board = b.clone(); // After calling b.clone(), don't use b in this scope
+        let actions = b.get_available_actions(debug);
 
-        let actions = playout_board.get_available_actions(debug);
+        if debug {
+            println!("{:?}", actions);
+        }
         
         for action in actions {
+
+            let mut playout_board: Board = b.clone();
+
             match random_playout(&mut playout_board, action, debug) {
                 1 => stats[1].push(action),
                 2 => stats[0].push(action),
@@ -686,21 +735,46 @@ fn print_actions(actions: IndexSet<u8>) {
                 _ => continue
             };
         }
-
     }
 
-    test
+    // sum actions in stats 
+
+    if debug {
+        println!("Player wins: {:?}", stats[1]);
+        println!("CPU wins: {:?}", stats[0]);
+        println!("Draws: {:?}", stats[2]);
+    }
+
+    let mut a = HashMap::new();
+
+    for i in stats[0].iter() {
+        if a.contains_key(i) {
+            *(a.get_mut(&i).unwrap()) += 1;
+        } else {
+            a.insert(i, 1);
+        }
+    }
+
+    if debug {
+        for (pos, wins) in &a {
+            println!("{}: {}", pos, wins);
+        } 
+    }
+
+    **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
 }
 
 fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
     
     let counter = 0;
-    println!("action: {}", action);
+    if debug {
+        println!("action: {}", action);
+    }
 
     loop {
         match b.check_game_state(debug) {
-            0 => { 
-                if counter % 2 == 0 { // even: CPU's Turn
+            0 => {
+                if !b.player_turn { // even: CPU's Turn
                     let actions = b.get_cpu_actions(debug);
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
@@ -715,25 +789,28 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
                     let rand_val = actions.get_index(rand_index).unwrap();
                     b.ins(*rand_val, 1, debug);     
                 }
+
+                if debug {
+                    b.print(debug);
+                }
+
                 continue;
             }, // Not completed
-            1 => 1,
-            2 => 2,
-            3 => 3,
+            1 => return 1,
+            2 => return 2,
+            3 => return 3,
             _ => 42
         };
     }
 }
 
-fn user_input() {
 
-}
 
 fn main() {
     
     println!("\nPlay a game of Reversi against AI!");
 
-    const MAX_STEPS: usize = 5;
+    const MAX_STEPS: usize = 10;
     const TIME: usize = 5;
 
     let width = 8;
@@ -745,9 +822,20 @@ fn main() {
 
     loop{
 
-        if board.check_game_state(debug) != 0 {
-            println!("Game has ended");
-            break;
+        match board.check_game_state(debug) {
+            1 => {
+                println!("Player has won");
+                break;
+            },
+            2 => {
+                println!("CPU has won");
+                break;
+            },
+            3 => {
+                println!("Game is a draw");
+                break;
+            },
+            _ => ()
         }
 
         board.print(true);
@@ -774,6 +862,10 @@ fn main() {
                         },
                         "actions\n" => {
                             print_actions(board.get_player_actions(debug));
+                            continue;
+                        },
+                        "rules\n" => {
+                            print_rules();
                             continue;
                         }
                         "exit\n" => break,
