@@ -388,6 +388,11 @@ impl Board {
         }
     }
 
+    // Returns true if game has ended, and false otherwise
+    fn check_game_state(&self) -> bool {
+        return false;
+    }
+
     fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.player_available_actions)
     }
@@ -620,14 +625,14 @@ fn convert_2d(s: &str) -> u8{
 fn convert_num(num: u8) -> String {
 
     let letter: &str = match num / 8 {
-        0 => "a",
-        1 => "b",
-        2 => "c",
-        3 => "d",
-        4 => "e",
-        5 => "f",
-        6 => "g",
-        7 => "h",
+        0 => "A",
+        1 => "B",
+        2 => "C",
+        3 => "D",
+        4 => "E",
+        5 => "F",
+        6 => "G",
+        7 => "H",
         _ => "x"
     };
 
@@ -741,9 +746,14 @@ fn main() {
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
 
-    let mut debug = false;
+    let mut debug = true;
 
     loop{
+
+        if board.check_game_state() == true {
+            println!("Game has ended");
+            break;
+        }
 
         board.print(true);
 
@@ -755,7 +765,7 @@ fn main() {
             match re.is_match(&input) {
                 true => {
                     let input_u8: u8 = convert_2d(&input);
-                    board.ins(input_u8, 1, true);
+                    board.ins(input_u8, 1, debug);
                 }
                 false => {
                     match input.as_str() {
@@ -783,11 +793,10 @@ fn main() {
         }
 
         else {
-            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, true);
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
             println!("CPU found {} as best play", best_play);
             board.ins(best_play, 2, debug);
         }     
-
 
     } // loop
 }
