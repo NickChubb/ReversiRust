@@ -83,7 +83,25 @@ impl Board {
         }
     }
 
+    fn clone(&self) -> Board {
+      
+        let mut new_board: Board = Board {
+            width: self.width,
+            height: self.height,
+            board_size: self.board_size,
+            board: self.board.clone(),
+            perimeter: self.perimeter.clone(),
+            player_available_actions: self.player_available_actions.clone(),
+            cpu_available_actions: self.cpu_available_actions.clone(),
+            player_turn: self.player_turn // Player always takes the first turn
+        };
+
+        new_board
+    }
+
     // fn copy(b: &Board) -> Board {
+
+
 
     //     Board {
     //         width: b.width,
@@ -103,7 +121,7 @@ impl Board {
      * Players tiles are printed in RED
      * CPUs tiles are printed in GREEN
      */
-    fn print(&mut self, debug: bool) {
+    fn print(&self, debug: bool) {
 
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
@@ -356,17 +374,17 @@ impl Board {
      */
     fn get_available_actions(&self, debug: bool) -> IndexSet<u8> {
         if self.player_turn {
-            let actions: IndexSet<u8> = IndexSet::clone(&self.player_available_actions);
+            let actions = self.get_player_actions(debug);
             if debug {
                 println!("Player Available Actions: {:?}", actions);
-            }
-            return actions;
+            }  
+            actions
         } else {
-            let actions: IndexSet<u8> = IndexSet::clone(&self.cpu_available_actions);
+            let actions = self.get_cpu_actions(debug);
             if debug {
                 println!("CPU Available Actions: {:?}", actions);
             }
-            return actions;
+            actions
         }
     }
 
@@ -383,11 +401,57 @@ impl Board {
         IndexSet::clone(&self.cpu_available_actions)
     }
 
+    fn get_direction(&self) -> u8 {
+        42
+    }
+
+    fn is_player_turn(&self) -> bool {
+        self.player_turn
+    }
+
     /**
      * Returns IndexSet of the tiles in the perimeter of the board pieces
      */
     fn get_perimeter(&self, debug: bool) -> IndexSet<u8> {
         IndexSet::clone(&self.perimeter)
+    }
+
+    fn check_game_state(&self, debug: bool) -> u8 {
+        let player_actions = self.get_player_actions(debug);
+        let cpu_actions = self.get_cpu_actions(debug);
+
+        // GAME ENDED
+        if cpu_actions.len() == 0 && player_actions.len() == 0 {
+            
+            // 0 incomplete
+            // 1 player win
+            // 2 cpu win
+            // 3 draw            
+
+            // SUM PIECES
+            let mut count_player = 0;
+            let mut count_cpu = 0;
+
+            for i in 0..64 {
+                match self.board.get(i).unwrap() {
+                    0 => continue,
+                    1 => count_player += 1,
+                    2 => count_cpu += 1,
+                    _ => println!("Error Code: ID10T" )
+                }
+            }
+            
+            if count_player > count_cpu {
+                1
+            } else if count_cpu > count_player {
+                2
+            } else {
+                3
+            }
+        }
+
+        else { 0 }
+    
     }
 
     /**
@@ -604,49 +668,66 @@ fn print_actions(actions: IndexSet<u8>) {
 /**
  * Recursively solves a puzzle by MCTS
  */
- fn monte_carlo_tree_search(b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
-    
+ fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
     
     let test = 20;
-    let mut stats: [u8; 3] = [0; 3];
+    let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
+    //let mut playout_board: Board = *b.clone();
+
     
 
     println!("CPU calculating {} random playouts", max_steps);
     for i in 0..max_steps {
+
+        let mut playout_board: Board = b.clone(); // After calling b.clone(), don't use b in this scope
+
+        let actions = playout_board.get_available_actions(debug);
         
-        for action in b.get_available_actions(true) {
-            let playout = random_playout(b, action, &stats);
+        for action in actions {
+            match random_playout(&mut playout_board, action, debug) {
+                1 => stats[1].push(action),
+                2 => stats[0].push(action),
+                3 => stats[2].push(action),
+                _ => continue
+            };
         }
 
     }
 
-    return test;
+    test
 }
 
-fn random_playout(b: &Board, action: u8, stats: &[u8; 3]) {
-    let playout_board = b.clone();
+fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
+    
     let counter = 0;
     println!("action: {}", action);
 
-    // while !check_game_state(&playout_board) {
-    //     if counter % 2 == 0 { // even: CPU's Turn
-    //         let actions_size = playout_board.cpu_available_actions.len();
-    //         let rand_index = rand::thread_rng().gen_range(0, actions_size);
-    //         let rand_val = playout_board.cpu_available_actions.get_index(rand_index).unwrap();
-    //         playout_board.ins(*rand_val, 2, true)
-    //     }
-        
-    //     else { // odd: Player's Turn
-    //         let actions_size = playout_board.player_available_actions.len();
-    //         let rand_index = rand::thread_rng().gen_range(0, actions_size);
-    //         let rand_val = playout_board.player_available_actions.get_index(rand_index).unwrap();
-    //         playout_board.ins(*rand_val, 1, true)
-    //     }
+    loop {
+        match b.check_game_state(debug) {
+            0 => { 
+                if counter % 2 == 0 { // even: CPU's Turn
+                    let actions = b.get_cpu_actions(debug);
+                    let actions_size = actions.len();
+                    let rand_index = rand::thread_rng().gen_range(0, actions_size);
+                    let rand_val = actions.get_index(rand_index).unwrap();
+                    b.ins(*rand_val, 2, debug);
+                }
 
-    // }
-    
-
-
+                else { // odd: Player's Turn
+                    let actions = b.get_player_actions(debug);
+                    let actions_size = actions.len();
+                    let rand_index = rand::thread_rng().gen_range(0, actions_size);
+                    let rand_val = actions.get_index(rand_index).unwrap();
+                    b.ins(*rand_val, 1, debug);     
+                }
+                continue;
+            }, // Not completed
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            _ => 42
+        };
+    }
 }
 
 fn user_input() {
@@ -676,7 +757,7 @@ fn main() {
 
         board.print(true);
 
-        if board.player_turn == true {
+        if board.is_player_turn() == true {
             println!("Place piece at position: ");
             let mut input = String::new();
             io::stdin().read_line(&mut input).expect("Failed to read line");
@@ -690,20 +771,20 @@ fn main() {
                     match input.as_str() {
                         "help\n" => {
                             print_help();
-                            continue
+                            continue;
                         },
                         "debug\n" => {
                             debug = toggle_debug(debug);
-                            continue
+                            continue;
                         },
                         "actions\n" => {
                             print_actions(board.get_player_actions(debug));
-                            continue
+                            continue;
                         }
                         "exit\n" => break,
                         _ => {
                             println!("ERROR: invalid input, enter 'help' for command information"); 
-                            continue
+                            continue;
                         }
     
                     };
@@ -714,9 +795,8 @@ fn main() {
         else {
             let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
             println!("CPU found {} as best play", best_play);
-            board.ins(best_play, 2, debug)
+            board.ins(best_play, 2, debug);
         }     
-
 
     } // loop
 }
