@@ -751,7 +751,7 @@ fn toggle_debug(mut debug: bool) -> bool{
 /**
 *   Performs random playouts 
 */
-fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
+fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8 {
     
     if debug { println!("Playing action: {}", action); }
 
@@ -787,10 +787,43 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
 }
 
 
+fn initial_user_input() -> (std::string::String, std::string::String, std::string::String) {
+
+    println!("Select a Game Mode: ");
+    println!("[1] Player VS CPU");
+    println!("[2] CPU VS CPU\n");
+    let mut mode = String::new();
+    let mut cpu_diff = [String::new(), String::new()];
+
+    io::stdin().read_line(&mut mode).expect("Failed to read line");
+    match mode.as_str().trim() {
+        "1" => {
+            println!("Select CPU Difficulty: ");
+            println!("[1] Easy");
+            println!("[2] Hard\n");
+            io::stdin().read_line(&mut cpu_diff[0]).expect("Failed to read line");
+        },
+        "2" => {
+            for i in 0..2 {
+                println!("Select CPU-{} Difficulty: ", i + 1);
+                println!("[1] Easy");
+                println!("[2] Hard\n");
+                io::stdin().read_line(&mut cpu_diff[i]).expect("Failed to read line");
+            }
+        }
+        _ => println!("Invalid input. Expected integer 1 or 2")
+    };
+
+    (mode.trim().to_string(), cpu_diff[0].trim().to_string(), cpu_diff[1].trim().to_string())
+}
+
 fn main() {
     
     print_title();
     print_rules();
+    let game_settings = initial_user_input();
+    println!("Mode: {} CPU-1 Diff: {} CPU-2 Diff: {}", game_settings.0, game_settings.1, game_settings.2);
+
 
     const MAX_STEPS: usize = 100;
     const TIME: usize = 5;
@@ -800,6 +833,16 @@ fn main() {
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
     let mut debug = true;
+
+    // Player VS CPU
+    if game_settings.0 == "1" {
+        
+    }
+
+    // CPU VS CPU
+    else {
+
+    }
 
     loop{
 
