@@ -783,8 +783,7 @@ fn main() {
         }
 
         else {
-            let new_board = board.clone();
-            let best_play: u8 = monte_carlo_tree_search(&new_board, MAX_STEPS, TIME, true);
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, true);
             println!("CPU found {} as best play", best_play);
             board.ins(best_play, 2, true);
         }     
