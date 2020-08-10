@@ -2,10 +2,14 @@ use std::io;
 use rand::Rng;
 use regex::Regex;
 
+use std::collections::HashMap;
+
 // IndexSet provides an indexed HashSet to allow returning element by index
 // Used for getting random items from set in O(1) time so MCTS is more efficient
 // Docs: https://docs.rs/indexmap/1.5.0/indexmap/set/struct.IndexSet.html
 use indexmap::IndexSet;
+
+
 
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
@@ -16,6 +20,7 @@ struct Board {
     height: u8,
     board_size: u8,
     board: Vec<u8>,
+    perimeter: IndexSet<u8>,
     player_available_actions: IndexSet<u8>,
     cpu_available_actions: IndexSet<u8>,
     player_turn: bool
@@ -39,6 +44,7 @@ impl Board {
         let size = w * h;
         let mut player_actions: IndexSet<u8> = IndexSet::new();
         let mut cpu_actions: IndexSet<u8> = IndexSet::new();
+        let mut perimeter_tiles: IndexSet<u8> = IndexSet::new();
         let mut new_board = vec![0; (size).into()];
         
         new_board[28] = 1;
@@ -56,16 +62,62 @@ impl Board {
         cpu_actions.insert(34);
         cpu_actions.insert(43);
 
+        perimeter_tiles.insert(18);
+        perimeter_tiles.insert(19);
+        perimeter_tiles.insert(20);
+        perimeter_tiles.insert(21);
+        perimeter_tiles.insert(26);
+        perimeter_tiles.insert(29);
+        perimeter_tiles.insert(34);
+        perimeter_tiles.insert(37);
+        perimeter_tiles.insert(42);
+        perimeter_tiles.insert(43);
+        perimeter_tiles.insert(44);
+        perimeter_tiles.insert(45);
+
         Board {
             width: w,
             height: h,
             board_size: size,
             board: new_board, //must convert u8 type -> usize type
+            perimeter: perimeter_tiles,
             player_available_actions: player_actions,
             cpu_available_actions: cpu_actions,
             player_turn: true // Player always takes the first turn
         }
     }
+
+    fn clone(&self) -> Board {
+      
+        let mut new_board: Board = Board {
+            width: self.width,
+            height: self.height,
+            board_size: self.board_size,
+            board: self.board.clone(),
+            perimeter: self.perimeter.clone(),
+            player_available_actions: self.player_available_actions.clone(),
+            cpu_available_actions: self.cpu_available_actions.clone(),
+            player_turn: self.player_turn // Player always takes the first turn
+        };
+
+        new_board
+    }
+
+    // fn copy(b: &Board) -> Board {
+
+
+
+    //     Board {
+    //         width: b.width,
+    //         height: b.height,
+    //         board_size: b.board_size,
+    //         board: b.board,
+    //         perimeter: b.perimeter,
+    //         player_available_actions: b.player_available_actions,
+    //         cpu_available_actions: b.cpu_available_actions,
+    //         player_turn: b.player_turn // Player always takes the first turn
+    //     }
+    // }
 
     /**
      * Print the board vec to the screen
@@ -73,7 +125,7 @@ impl Board {
      * Players tiles are printed in RED
      * CPUs tiles are printed in GREEN
      */
-    fn print(&mut self, debug: bool) {
+    fn print(&self, debug: bool) {
 
         println!("\n     {}", Style::default().bold().paint("A B C D E F G H") );
 
@@ -111,12 +163,12 @@ impl Board {
     /**
      * Handles a piece being put onto the board
      * 
-     * Adds to board -> flips pieces -> updates available actions -> change turns
+     * Adds to board -> flips pieces -> update perimeter -> updates available actions -> change turns
      */
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
         // add to board
-        let pos_u: usize = match self.get_available_actions().contains(&pos) {
+        let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
                 println!("ERROR: not a valid action");
                 return;
@@ -138,89 +190,9 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: u8 = match direction {
-
-                    0 => { // Right
-                        let position = pos + u;
-                        if position % 8 == 0 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    1 => { // Left
-                        let position = match pos.checked_sub(u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        };
-                        if position % 8 == 7 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    2 => { // Down
-                        let position = pos + (u * 8);
-                        if position < self.board_size.into() {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    3 => { // Up
-                        let new_pos = match pos.checked_sub(u * 8) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        new_pos
-                    },
-
-                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 + u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 7 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 - u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 0 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    6 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) - u;
-                        if position < self.board_size.into() && position % 8 != 7 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    7 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) + u;
-                        if position < self.board_size.into() && position % 8 != 0 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    _ => break
+                let new_pos: u8 = match get_new_pos(direction, pos, u, self.board_size) {
+                    None => break,
+                    Some(x) => Some(x).unwrap()
                 };
 
                 let new_pos_usize: usize = new_pos.into();
@@ -232,7 +204,6 @@ impl Board {
                 } else if tile == &val {
                     for t in &tiles {
                         self.add(*t, val);
-                        self.update_surrounding_actions(*t, val, debug);
                     }
                 } else {
                     tiles.clear();
@@ -243,12 +214,72 @@ impl Board {
             }
         }
 
+        // Update perimeter
+        self.perimeter.remove(&pos);
+        
+        for i in 0..3 {
+            let new_pos: u8 = match pos.checked_sub(9 - i) {
+                None => continue,
+                Some(x) => Some(x).unwrap()
+            };
+            let new_pos_usize: usize = new_pos.into();
+            if self.board.get(new_pos_usize).unwrap() == &0 { // implement row overflow handling
+                self.perimeter.insert(new_pos);
+            }
+        }
+        
+        match pos.checked_sub(1) {
+            Some(x) => {
+                let new_pos = Some(x).unwrap();
+                let new_pos_usize: usize = Some(x).unwrap().into();
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
+                }
+            },
+            None => {
+                if debug {
+                    println!("Overflow, but it's chill, I handled it")
+                }
+            }
+        };
+
+        match pos + 1 < self.board_size {
+            true => {
+                let new_pos = pos + 1;
+                let new_pos_usize: usize = new_pos.into();
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
+                }
+            },
+            false => {
+               if debug {
+                   println!("Overflow, but it's chill, I handled it")
+               }
+            }
+        }
+
+        for i in 0..3 {
+            let new_pos: u8 = pos + 9 - i;
+            let new_pos_usize: usize = new_pos.into();
+            if new_pos < self.board_size {
+                if self.board.get(new_pos_usize).unwrap() == &0 {
+                    self.perimeter.insert(new_pos);
+                }
+            }
+        }
+
+        if debug {
+            println!("{:?}", self.perimeter);
+        }
+
         // update available actions
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
 
-        for action in self.get_available_actions()  {
-            self.check_tile_actions(action, val, debug);
+        for player in 1..3 {
+            for tile in self.get_perimeter(debug) {
+                self.check_tile_actions(tile, player, debug);
+            }
         }
 
         // alternate turns
@@ -263,63 +294,11 @@ impl Board {
             }
             self.player_turn = true
         }
-    }
 
-    /**
-     *  For inserted tile, will check if the tiles surrounding it are valid actions
-     */
-    fn update_surrounding_actions(&mut self, pos: u8, val: u8, debug: bool) {
-
-        // Update top row
-        for i in 0..3 {
-            let new_pos: u8 = match pos.checked_sub(9 - i) { // overflow when on right most col
-                None => continue,
-                Some(x) => Some(x).unwrap()
-            };
-            let new_pos_u: usize = new_pos.into();
-            let tile = self.board.get(new_pos_u).unwrap();
-            if tile == &0 {
-                for j in 1..3 {
-                    self.check_tile_actions(new_pos, j, debug);
-                }
-            }
+        if debug {
+            println!("Player's Available Actions: {:?}", self.get_player_actions(debug));
+            println!("CPU's Available Actions: {:?}", self.get_cpu_actions(debug));
         }
-
-        // Update middle row
-        for i in 0..3 {
-            if i != 0 {
-                let new_pos: u8 = match pos.checked_sub(i - 1) { // overflow when on right most col
-                    None => continue,
-                    Some(x) => Some(x).unwrap()
-                };
-                if new_pos % 8 != 7 {
-                    let new_pos_u: usize = new_pos.into();
-                    let tile = self.board.get(new_pos_u).unwrap();
-                    if tile == &0 {
-                        for j in 1..3 {
-                            self.check_tile_actions(new_pos, j, debug);
-                        }
-                    }
-                }
-            }
-        }
-        
-
-        // Update bottom row
-        for i in 0..3 {
-            let new_pos: u8 = match (pos + 9 - i) < self.board_size.into() { // overflow when on right most col
-                true => pos + 9 - i,
-                false => continue
-            };
-            let new_pos_u: usize = new_pos.into();
-            let tile = self.board.get(new_pos_u).unwrap();
-            if tile == &0 {
-                for j in 1..3 {
-                    self.check_tile_actions(new_pos, j, debug);
-                }
-            }
-        }
-
     }
 
     /**
@@ -342,89 +321,9 @@ impl Board {
             loop {
 
                 // Depending on direction, changes the formula for iteration
-                let new_pos: u8 = match direction {
-
-                    0 => { // Right
-                        let position = pos + u;
-                        if position % 8 == 0 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    1 => { // Left
-                        let position = match pos.checked_sub(u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        };
-                        if position % 8 == 7 {
-                            break;
-                        } else {
-                            position
-                        }
-                    },
-
-                    2 => { // Down
-                        let position = pos + (u * 8);
-                        if position < self.board_size.into() {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    3 => { // Up
-                        let new_pos = match pos.checked_sub(u * 8) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        new_pos
-                    },
-
-                    4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 + u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 7 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
-                        let new_pos = match pos.checked_sub(u * 8 - u) {
-                            None => break,
-                            Some(x) => Some(x).unwrap()
-                        }; 
-                        if new_pos % 8 != 0 {
-                            new_pos
-                        } else {
-                            break;
-                        }
-                    },
-
-                    6 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) - u;
-                        if position < self.board_size.into() && position % 8 != 7 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    7 => { // Down left: must check that doesnt % 8 = 7 and 
-                        let position = pos + (u * 8) + u;
-                        if position < self.board_size.into() && position % 8 != 0 {
-                            position
-                        } else {
-                            break;
-                        }
-                    },
-
-                    _ => break
+                let new_pos: u8 = match get_new_pos(direction, pos, u, self.board_size) {
+                    None => break,
+                    Some(x) => Some(x).unwrap()
                 };
 
                 let new_pos_usize: usize = new_pos.into();
@@ -438,14 +337,14 @@ impl Board {
                     // If there is a tile the same color as the initial val with opposite tiles inbetween...
                     if val == 1 {
                         if debug {
-                            println!("Added {} from actions for player {}", new_pos, val);
+                            println!("Added {} to actions for player {}", new_pos, val);
                         }
                         self.player_available_actions.insert(pos);
                         tiles.clear();
                         return;
                     } else {
                         if debug {
-                            println!("Removed {} from actions for player {}", new_pos, val);
+                            println!("Added {} to actions for player {}", new_pos, val);
                         }
                         self.cpu_available_actions.insert(pos);
                         tiles.clear();
@@ -454,7 +353,7 @@ impl Board {
                 } else {
                     // Else, blank tile means not available action 
                     if debug {
-                        println!("Removed {} from actions for player {}", pos, val);
+                        //println!("Removed {} from actions for player {}", pos, val);
                     }
                     if val == 1 {
                         self.player_available_actions.remove(&pos);
@@ -472,19 +371,86 @@ impl Board {
     }
 
     /**
-     * Returns the IndexSet of available actions depending on which players turn it is
+     * Returns a clone of the IndexSet of available actions depending on which players turn it is
      * 
      * Should only use this function to get the available actions, don't individually
      * reference the player or cpu sets
      */
-    fn get_available_actions(&self) -> IndexSet<u8> {
+    fn get_available_actions(&self, debug: bool) -> IndexSet<u8> {
         if self.player_turn {
-            let actions: IndexSet<u8> = IndexSet::clone(&self.player_available_actions);
-            return actions;
+            let actions = self.get_player_actions(debug);
+            if debug {
+                println!("Player Available Actions: {:?}", actions);
+            }  
+            actions
         } else {
-            let actions: IndexSet<u8> = IndexSet::clone(&self.cpu_available_actions);
-            return actions;
+            let actions = self.get_cpu_actions(debug);
+            if debug {
+                println!("CPU Available Actions: {:?}", actions);
+            }
+            actions
         }
+    }
+
+    fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.player_available_actions)
+    }
+
+    fn get_cpu_actions(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.cpu_available_actions)
+    }
+
+    fn get_direction(&self) -> u8 {
+        42
+    }
+
+    fn is_player_turn(&self) -> bool {
+        self.player_turn
+    }
+
+    /**
+     * Returns IndexSet of the tiles in the perimeter of the board pieces
+     */
+    fn get_perimeter(&self, debug: bool) -> IndexSet<u8> {
+        IndexSet::clone(&self.perimeter)
+    }
+
+    fn check_game_state(&self, debug: bool) -> u8 {
+        let player_actions = self.get_player_actions(debug);
+        let cpu_actions = self.get_cpu_actions(debug);
+
+        // GAME ENDED
+        if cpu_actions.len() == 0 && player_actions.len() == 0 {
+            
+            // 0 incomplete
+            // 1 player win
+            // 2 cpu win
+            // 3 draw            
+
+            // SUM PIECES
+            let mut count_player = 0;
+            let mut count_cpu = 0;
+
+            for i in 0..64 {
+                match self.board.get(i).unwrap() {
+                    0 => continue,
+                    1 => count_player += 1,
+                    2 => count_cpu += 1,
+                    _ => println!("Error Code: ID10T" )
+                }
+            }
+            
+            if count_player > count_cpu {
+                1
+            } else if count_cpu > count_player {
+                2
+            } else {
+                3
+            }
+        }
+
+        else { 0 }
+    
     }
 
     /**
@@ -505,6 +471,109 @@ impl Board {
         self.player_available_actions.insert(pos);
     }
     
+}
+
+/** 
+ * Returns a new position based on direction, initial pos, iteration, and board size
+ * Intended to be used in a loop (such as in the Board.ins() function)
+ * 
+ * @returns: Some(x) if new position is on board, or
+ * @returns: None if position overflows board
+ */
+fn get_new_pos(dir: u8, pos: u8, iter: u8, size: u8) -> Option<u8> {
+    let new_pos: Option<u8> = match dir {
+
+        0 => { // Right
+            let position = pos + iter;
+            if position % 8 == 0 {
+                None
+            } else {
+                Some(position)
+            }
+        },
+
+        1 => { // Left
+            let position = match pos.checked_sub(iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 == 7 {
+                        None
+                    } else {
+                        Some(x)
+                    }
+                }
+            };
+            position
+        },
+
+        2 => { // Down
+            let position = pos + (iter * 8);
+            if position < size {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        3 => { // Up
+            let new_pos = match pos.checked_sub(iter * 8) {
+                None => None,
+                Some(x) => Some(x)
+            };
+            new_pos
+        },
+
+        4 => { // Up left: must check that doesn't % 8 = 7 and doesn't overflow
+            let new_pos = match pos.checked_sub(iter * 8 + iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 != 7 {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            }; 
+            new_pos
+        },
+
+        5 => { // Up right: must check that doesn't % 8 = 0 and doesn't overflow
+            let new_pos = match pos.checked_sub(iter * 8 - iter) {
+                None => None,
+                Some(x) => {
+                    if Some(x).unwrap() % 8 != 0 {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            };
+            new_pos
+            
+        },
+
+        6 => { // Down left: must check that doesnt % 8 = 7 and 
+            let position = pos + (iter * 8) - iter;
+            if position < size && position % 8 != 7 {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        7 => { // Down left: must check that doesnt % 8 = 7 and 
+            let position = pos + (iter * 8) + iter;
+            if position < size && position % 8 != 0 {
+                Some(position)
+            } else {
+                None
+            }
+        },
+
+        _ => None
+    };
+
+    new_pos
 }
 
 /**
@@ -547,8 +616,58 @@ fn convert_2d(s: &str) -> u8{
 }
 
 /**
+ * Convert integer vector index into 2d string index
+ * Note: this function is the inverse of convert_2d()
+ * @params:     num: less than 64 valued integer representing 1d index of vector
+ * @returns:    String of values [a-h][1-8]
+ */
+fn convert_num(num: u8) -> String {
+
+    let letter: &str = match num / 8 {
+        0 => "A",
+        1 => "B",
+        2 => "C",
+        3 => "D",
+        4 => "E",
+        5 => "F",
+        6 => "G",
+        7 => "H",
+        _ => "x"
+    };
+
+    format!("{}{}", letter, num % 8 + 1)
+}
+
+fn print_help() {
+    println!("\nCommands:\n");
+    println!("  {}  -  print the current available actions", Style::default().bold().paint("actions"));
+    println!("  {}    -  toggles showing debug information", Style::default().bold().paint("debug"));
+    println!("  {}     -  quit the game", Style::default().bold().paint("exit"));
+    println!();
+}
+
+fn toggle_debug(mut debug: bool) -> bool{
+    if debug {
+        println!("Debug turned OFF");
+        false
+    } else {
+        println!("Debug turned ON");
+        true
+    }
+}
+
+fn print_actions(actions: IndexSet<u8>) {
+    print!("\nPlayer's Actions: ");
+    for action in actions {
+        print!("{} ", Style::default().bold().paint(convert_num(action)));
+    }
+    println!("\n");
+}
+
+/**
  * Recursively solves a puzzle by MCTS
  */
+<<<<<<< HEAD
 fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool) {
     
     let actions_size = b.cpu_available_actions.len();
@@ -562,6 +681,82 @@ fn monte_carlo_tree_search(b: Board, max_steps: usize, timer: usize, debug: bool
 
     }
 }
+=======
+ fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
+    
+    let test = 20;
+    let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
+    //let mut playout_board: Board = *b.clone();
+
+    
+
+    println!("CPU calculating {} random playouts", max_steps);
+    for i in 0..max_steps {
+
+        let mut playout_board: Board = b.clone(); // After calling b.clone(), don't use b in this scope
+
+        let actions = playout_board.get_available_actions(debug);
+        
+        for action in actions {
+            match random_playout(&mut playout_board, action, debug) {
+                1 => stats[1].push(action),
+                2 => stats[0].push(action),
+                3 => stats[2].push(action),
+                _ => continue
+            };
+        }
+    }
+
+    // sum actions in stats 
+
+    let mut a = HashMap::new();
+
+    for i in stats[0] {
+        if a.contains_key(&i) {
+            a[&i] += 1;
+        } else {
+            a[&i] = 1;
+        }
+    }
+
+    *(a.iter().max_by_key(|entry | entry.1).unwrap().0)
+}
+
+fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8{
+    
+    let counter = 0;
+    println!("action: {}", action);
+
+    loop {
+        match b.check_game_state(debug) {
+            0 => { 
+                if counter % 2 == 0 { // even: CPU's Turn
+                    let actions = b.get_cpu_actions(debug);
+                    let actions_size = actions.len();
+                    let rand_index = rand::thread_rng().gen_range(0, actions_size);
+                    let rand_val = actions.get_index(rand_index).unwrap();
+                    b.ins(*rand_val, 2, debug);
+                }
+
+                else { // odd: Player's Turn
+                    let actions = b.get_player_actions(debug);
+                    let actions_size = actions.len();
+                    let rand_index = rand::thread_rng().gen_range(0, actions_size);
+                    let rand_val = actions.get_index(rand_index).unwrap();
+                    b.ins(*rand_val, 1, debug);     
+                }
+                continue;
+            }, // Not completed
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            _ => 42
+        };
+    }
+}
+
+fn user_input() {
+>>>>>>> 2b8a589a19733b813f924c85e9165df96a3602ef
 
 fn random_playout(action: u8) {
     println!("action: {}", action);
@@ -574,7 +769,7 @@ fn main() {
     
     println!("\nPlay a game of Reversi against AI!");
 
-    const MAX_STEPS: usize = 100;
+    const MAX_STEPS: usize = 5;
     const TIME: usize = 5;
 
     let width = 8;
@@ -582,15 +777,16 @@ fn main() {
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
 
+    let mut debug = true;
+
     loop{
 
-        board.print(true);
+        if board.check_game_state(debug) != 0 {
+            println!("Game has ended");
+            break;
+        }
 
-        println!("Place piece at position: ");
-
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
-
+<<<<<<< HEAD
         let res: u8 = match re.is_match(&input) {
             true => convert_2d(&input),
             false => {println!("ERROR: invalid input"); continue},
@@ -602,7 +798,50 @@ fn main() {
         };
         board.ins(res, value, true);
         monte_carlo_tree_search(board, MAX_STEPS, TIME, true);
+=======
+        board.print(true);
 
-    }
+        if board.is_player_turn() == true {
+            println!("Place piece at position: ");
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).expect("Failed to read line");
+            
+            match re.is_match(&input) {
+                true => {
+                    let input_u8: u8 = convert_2d(&input);
+                    board.ins(input_u8, 1, debug);
+                }
+                false => {
+                    match input.as_str() {
+                        "help\n" => {
+                            print_help();
+                            continue;
+                        },
+                        "debug\n" => {
+                            debug = toggle_debug(debug);
+                            continue;
+                        },
+                        "actions\n" => {
+                            print_actions(board.get_player_actions(debug));
+                            continue;
+                        }
+                        "exit\n" => break,
+                        _ => {
+                            println!("ERROR: invalid input, enter 'help' for command information"); 
+                            continue;
+                        }
+    
+                    };
+                }
+            };
+        }
+>>>>>>> 2b8a589a19733b813f924c85e9165df96a3602ef
 
+        else {
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
+            println!("CPU found {} as best play", best_play);
+            board.ins(best_play, 2, debug);
+        }     
+
+    } // loop
 }
