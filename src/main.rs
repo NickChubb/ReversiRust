@@ -785,7 +785,7 @@ fn main() {
         else {
             let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, true);
             println!("CPU found {} as best play", best_play);
-            board.ins(best_play, 2, true);
+            board.ins(best_play, 2, debug);
         }     
 
 
