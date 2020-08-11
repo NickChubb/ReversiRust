@@ -144,9 +144,9 @@ impl Board {
         }
         print!("{}\n\n", Style::default().bold().paint("8"));
 
-        println!("     Player: {}, CPU: {}", Red.paint(player_score.to_string()), Green.paint(cpu_score.to_string()));
+        println!("     Player: {}, CPU: {}\n", Red.paint(player_score.to_string()), Green.paint(cpu_score.to_string()));
 
-        print_actions(self.get_player_actions(debug));
+        // print_actions(self.get_player_actions(debug));
     }
 
     /**
@@ -738,8 +738,19 @@ fn toggle_debug(mut debug: bool) -> bool{
         } 
     }
 
-    // Returns the highest value in frequency hashmap as best play
-    **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
+    // Returns the highest value in frequency hashmap as best play if win list exists
+    if stats[0].len() == 0 {
+        let actions = b.get_available_actions(debug);
+        let actions_size = actions.len();
+        let rand_index = rand::thread_rng().gen_range(0, actions_size);
+        let rand_val = actions.get_index(rand_index).unwrap();
+        return *rand_val;
+    }
+
+    else {
+        **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
+    }
+
 }
 
 
@@ -891,14 +902,17 @@ fn main() {
             match board.check_game_state(debug) {
                 1 => {
                     println!("Player has won");
+                    board.print(debug);
                     break;
                 },
                 2 => {
                     println!("CPU has won");
+                    board.print(debug);
                     break;
                 },
                 3 => {
                     println!("Game is a draw");
+                    board.print(debug);
                     break;
                 },
                 _ => ()
@@ -966,20 +980,23 @@ fn main() {
             match board.check_game_state(debug) {
                 1 => {
                     println!("CPU-1 has won");
+                    board.print(debug);
                     break;
                 },
                 2 => {
                     println!("CPU-2 has won");
+                    board.print(debug);
                     break;
                 },
                 3 => {
                     println!("Game is a draw");
+                    board.print(debug);
                     break;
                 },
                 _ => ()
             };
 
-            board.print(true);
+            board.print(debug);
             
             if start == true {
                 println!("PRESS ENTER TO START CPU BATTLE: ");
