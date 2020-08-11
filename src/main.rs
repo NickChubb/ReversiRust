@@ -1,7 +1,6 @@
 use std::io;
 use rand::Rng;
 use regex::Regex;
-//use math::round;
 
 // HashMap is used in order to assign a count to each element inside win/draw/loss stats
 use std::collections::HashMap;
@@ -39,9 +38,9 @@ impl Board {
      * Initializes a Reversi game board
      * 
      * board elements are u8 integers, which represent:
-     *      0 => empty square
-     *      1 => player
-     *      2 => cpu
+     *      0 => Empty Square
+     *      1 => Player
+     *      2 => CPU
      */
     fn new(w: u8, h: u8) -> Board {
 
@@ -93,7 +92,7 @@ impl Board {
 
     fn clone(&self) -> Board {
       
-        let mut new_board: Board = Board {
+        let new_board: Board = Board {
             width: self.width,
             height: self.height,
             board_size: self.board_size,
@@ -146,7 +145,6 @@ impl Board {
 
         println!("     Player: {}, CPU: {}\n", Red.paint(player_score.to_string()), Green.paint(cpu_score.to_string()));
 
-        // print_actions(self.get_player_actions(debug));
     }
 
     /**
@@ -257,36 +255,30 @@ impl Board {
             }
         }
 
-        if debug {
-            println!("{:?}", self.perimeter);
-        }
+        if debug { println!("{:?}", self.perimeter); }
 
         // update available actions
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
 
         for player in 1..3 {
-            for tile in self.get_perimeter(debug) {
+            for tile in self.get_perimeter() {
                 self.check_tile_actions(tile, player, debug);
             }
         }
 
         // alternate turns
         if self.player_turn {
-            if debug {
-                println!("CPU's turn");
-            }
+            if debug { println!("Player's turn"); }
             self.player_turn = false
-        }else {
-            if debug {
-                println!("Player's turn");
-            }
+        } else {
+            if debug { println!("CPU's turn"); }
             self.player_turn = true
         }
 
         if debug {
-            println!("Player's Available Actions: {:?}", self.get_player_actions(debug));
-            println!("CPU's Available Actions: {:?}", self.get_cpu_actions(debug));
+            println!("Player's Available Actions: {:?}", self.get_player_actions());
+            println!("CPU's Available Actions: {:?}", self.get_cpu_actions());
         }
     }
 
@@ -296,9 +288,7 @@ impl Board {
      */
     fn check_tile_actions(&mut self, pos: u8, val: u8, debug: bool){
 
-        let pos_u: usize = pos.into();
-
-        let mut u: u8 = 1;
+        let mut u: u8 = 1; // used as the iter for get_new_pos()
         let mut tiles = Vec::new();
 
         // Manages the direction of iteration
@@ -316,7 +306,6 @@ impl Board {
                 };
 
                 let new_pos_usize: usize = new_pos.into();
-
                 let tile = self.board.get(new_pos_usize).unwrap(); // Gets value from tile at new position
 
                 if tile != &val && tile != &0 {
@@ -326,14 +315,14 @@ impl Board {
                     // If there is a tile the same color as the initial val with opposite tiles inbetween...
                     if val == 1 {
                         if debug {
-                            println!("Added {} to actions for player {}", new_pos, val);
+                            println!("Added {} to actions for Player {}", new_pos, val);
                         }
                         self.player_available_actions.insert(pos);
                         tiles.clear();
                         return;
                     } else {
                         if debug {
-                            println!("Added {} to actions for player {}", new_pos, val);
+                            println!("Added {} to actions for CPU {}", new_pos, val);
                         }
                         self.cpu_available_actions.insert(pos);
                         tiles.clear();
@@ -367,13 +356,13 @@ impl Board {
      */
     fn get_available_actions(&self, debug: bool) -> IndexSet<u8> {
         if self.player_turn {
-            let actions = self.get_player_actions(debug);
+            let actions = self.get_player_actions();
             if debug {
                 println!("Player Available Actions: {:?}", actions);
             }  
             actions
         } else {
-            let actions = self.get_cpu_actions(debug);
+            let actions = self.get_cpu_actions();
             if debug {
                 println!("CPU Available Actions: {:?}", actions);
             }
@@ -381,16 +370,12 @@ impl Board {
         }
     }
 
-    fn get_player_actions(&self, debug: bool) -> IndexSet<u8> {
+    fn get_player_actions(&self) -> IndexSet<u8> {
         IndexSet::clone(&self.player_available_actions)
     }
 
-    fn get_cpu_actions(&self, debug: bool) -> IndexSet<u8> {
+    fn get_cpu_actions(&self) -> IndexSet<u8> {
         IndexSet::clone(&self.cpu_available_actions)
-    }
-
-    fn get_direction(&self) -> u8 {
-        42
     }
 
     fn is_player_turn(&self) -> bool {
@@ -400,13 +385,13 @@ impl Board {
     /**
      * Returns IndexSet of the tiles in the perimeter of the board pieces
      */
-    fn get_perimeter(&self, debug: bool) -> IndexSet<u8> {
+    fn get_perimeter(&self) -> IndexSet<u8> {
         IndexSet::clone(&self.perimeter)
     }
 
     fn check_game_state(&self, debug: bool) -> u8 {
-        let player_actions = self.get_player_actions(debug);
-        let cpu_actions = self.get_cpu_actions(debug);
+        let player_actions = self.get_player_actions();
+        let cpu_actions = self.get_cpu_actions();
 
         // GAME ENDED
         if cpu_actions.len() == 0 || player_actions.len() == 0 {
@@ -460,12 +445,12 @@ impl Board {
      * val = 1: player piece
      * val = 2: cpu piece
      */
-    fn add(&mut self, pos: u8, val: u8){
+    fn add(&mut self, pos: u8, val: u8) {
         let pos_u: usize = pos.into();
         self.board.splice(pos_u..(pos_u + 1), [val].iter().cloned());
     }
 
-    fn rm(&mut self, pos: u8){
+    fn rm(&mut self, pos: u8) {
         let pos_u: usize = pos.into();
         self.board.insert(pos_u, 0);
         self.player_available_actions.insert(pos);
@@ -665,14 +650,14 @@ fn print_actions(actions: IndexSet<u8>) {
     println!("\n");
 }
 
-fn print_rules(){
+fn print_rules() {
     println!("      #                {}                #\n", Style::default().bold().paint("REVERSI RULES"));
     println!(" * {} tiles represent the user's spots, {} represent the CPUs.\n", Red.paint("Red"), Green.paint("Green"));
     println!(" * The user starts by placing a tile adjacent to a green tile.\n Possible actions are marked by asterisks (*) on the board.\n");
     println!(" * The game ends when either player cannot play a piece or the\n board is full.  The player with the most tiles wins.\n");
 }
 
-fn toggle_debug(mut debug: bool) -> bool{
+fn toggle_debug(debug: bool) -> bool {
     if debug {
         println!("Debug turned OFF");
         false
@@ -692,7 +677,7 @@ fn toggle_debug(mut debug: bool) -> bool{
  *      debug          -    used to print extra debug statements
  * 
  */
- fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, diff: &String, debug: bool) -> u8 {
+ fn monte_carlo_tree_search(b: &Board, max_steps: usize, timer: usize, diff: &String, debug: bool) -> u8 {
 
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
     let start_time = Instant::now();
@@ -700,20 +685,21 @@ fn toggle_debug(mut debug: bool) -> bool{
     println!("CPU performing {} random playouts...", max_steps);
     
     for i in 0..max_steps {
+        // Break out of function when timer is reached
         if start_time.elapsed() > Duration::new(timer as u64, 0) { break }
         
         let actions = b.get_available_actions(debug);
 
-        if debug { println!("{:?}", actions); }
+        if debug { println!("Step #{} | {:?}", i, actions); }
         
         for action in actions {
 
             let mut playout_board: Board = b.clone();
 
             match random_playout(&mut playout_board, action, diff, debug) {
-                1 => stats[1].push(action),
-                2 => stats[0].push(action),
-                3 => stats[2].push(action),
+                1 => stats[1].push(action), // 1 -> Player wins so add action to loss list
+                2 => stats[0].push(action), // 2 -> CPU wins so add action to win list
+                3 => stats[2].push(action), // 3 -> Game draw so add action to draw list
                 _ => continue
             };
         }
@@ -738,7 +724,8 @@ fn toggle_debug(mut debug: bool) -> bool{
         } 
     }
 
-    // Returns the highest value in frequency hashmap as best play if win list exists
+    // Returns the highest value in frequency hashmap as best play if win list exists,
+    // else return a random action if no elements exist in win list.
     if stats[0].len() == 0 {
         let actions = b.get_available_actions(debug);
         let actions_size = actions.len();
@@ -746,7 +733,7 @@ fn toggle_debug(mut debug: bool) -> bool{
         let rand_val = actions.get_index(rand_index).unwrap();
         return *rand_val;
     }
-
+    
     else {
         **a.iter().max_by(|a, b| a.1.cmp(&b.1)).map(|(k, _v)| k).unwrap()
     }
@@ -755,9 +742,11 @@ fn toggle_debug(mut debug: bool) -> bool{
 
 
 /**
-*   Performs random playouts 
+*   Performs random playouts or uses a heuristic to perform the next move based on the diff parameter.
+        - if diff is set to easy, then the playouts will be random actions 
+        - if diff is set to hard, playouts will use the Max Tile Heuristic
 */
-fn random_playout(mut b: &mut Board, action: u8, diff: &String, debug: bool) -> u8 {
+fn random_playout(b: &mut Board, action: u8, diff: &String, debug: bool) -> u8 {
     
     if debug { println!("Playing action: {}", action); }
 
@@ -766,34 +755,30 @@ fn random_playout(mut b: &mut Board, action: u8, diff: &String, debug: bool) -> 
         match b.check_game_state(debug) {
             0 => { // Game not done
                 if !b.player_turn { 
-                    let actions = b.get_cpu_actions(debug);
+                    let actions = b.get_cpu_actions();
                     let actions_size = actions.len();
 
                     match diff.as_str() {
+                        // EASY
                         "1" => {
                             let rand_index = rand::thread_rng().gen_range(0, actions_size);
                             let rand_val = actions.get_index(rand_index).unwrap();
                             b.ins(*rand_val, 2, debug);
                         },
                         
+                        // HARD
                         "2" => {
                             let new_val = get_max_tile(b, debug);
-
-                            if new_val == 99 {
-                                continue;
-                            }
-                                // Someone ran out of moves
+                            if new_val == 99 { continue; } // Someone ran out of moves
                             if debug { println!("new_val: {}", new_val); }
                             b.ins(new_val, 2, debug);
                         }
                         _ => println!("How did you get here?")
                     };
-                    
-                   
                 }
 
                 else {
-                    let actions = b.get_player_actions(debug);
+                    let actions = b.get_player_actions();
                     let actions_size = actions.len();
                     let rand_index = rand::thread_rng().gen_range(0, actions_size);
                     let rand_val = actions.get_index(rand_index).unwrap();
@@ -812,24 +797,22 @@ fn random_playout(mut b: &mut Board, action: u8, diff: &String, debug: bool) -> 
 }
 
 /**
- * Max Tile Heuristic - Returns the position that results in the highest
- *                      score out of all possible actions
+ * Max Tile Heuristic
+ *      - Returns the position that results in the highest score out of all possible actions
+ *      - If no actions are available, then return an error code of 99 to indicate game end                      
  */
-fn get_max_tile(mut b: &Board, debug: bool) -> u8 {
+fn get_max_tile(b: &Board, debug: bool) -> u8 {
 
     let actions = b.get_available_actions(debug);
+    let (prev_player_score, prev_cpu_score): (u8, u8) = b.get_score();
+    let best_score = prev_cpu_score;
+    let mut best_pos: u8 = 0;
+    
+    if debug { println!("{:?}", actions); }
 
     if actions.len() == 0 {
         return 99;
     }
-
-    if debug { println!("{:?}", actions); }
-    
-    let (prev_player_score, prev_cpu_score): (u8, u8) = b.get_score();
-
-    let best_score = prev_cpu_score;
-    let mut best_pos: u8 = 0;
-
 
     for action in actions {
         // check increase in value of tiles
@@ -842,7 +825,6 @@ fn get_max_tile(mut b: &Board, debug: bool) -> u8 {
         if cpu_score > best_score {
             best_pos = action;
         }
-        
     }
     
     best_pos
@@ -886,15 +868,13 @@ fn initial_user_input() -> (String, String, String) {
     (mode.trim().to_string(), cpu_diff[0].trim().to_string(), cpu_diff[1].trim().to_string())
 }
 
+
 fn main() {
-    
     print_title();
     print_rules();
     let game_settings = initial_user_input();
-
     const MAX_STEPS: usize = 10;
     const TIME: usize = 100; 
-
     let width = 8;
     let height = 8;
     let mut board = Board::new(width, height);
@@ -905,7 +885,7 @@ fn main() {
     // Player VS CPU
     // =============
     if game_settings.0 == "1" {
-        loop{
+        loop {
             match board.check_game_state(debug) {
                 1 => {
                     println!("Player has won");
@@ -938,7 +918,6 @@ fn main() {
                         let input_u8: u8 = convert_2d(&input);
                         board.ins(input_u8, 1, debug);
                     },
-    
                     false => {
                         match input.as_str() {
                             "help\n" => {
@@ -946,7 +925,7 @@ fn main() {
                                 continue;
                             },
                             "actions\n" => {
-                                print_actions(board.get_player_actions(debug));
+                                print_actions(board.get_player_actions());
                                 continue;
                             },
                             "rules\n" => {
@@ -973,8 +952,7 @@ fn main() {
                 println!("CPU found {} as best play", best_play);
                 board.ins(best_play, 2, debug);
             }     
-    
-        } // loop
+        } 
     }
 
     // ==========
@@ -1021,7 +999,7 @@ fn main() {
                         continue;
                     },
                     "actions\n" => {
-                        print_actions(board.get_player_actions(debug));
+                        print_actions(board.get_player_actions());
                         continue;
                     },
                     "rules\n" => {
@@ -1037,9 +1015,7 @@ fn main() {
                         println!("ERROR: invalid input, enter 'help' for command information"); 
                         continue;
                     }
-
                 };
-                
             }
 
             // Assume CPU-1 is considered as "Player" for mode CPU vs CPU
@@ -1050,7 +1026,6 @@ fn main() {
                     println!("CPU-1 found {} as best play", best_play);
                     board.ins(best_play, 1, debug);    
                 },
-
                 false => {
                     let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.2, debug);
                     println!("CPU-2 found {} as best play", best_play);
@@ -1058,7 +1033,5 @@ fn main() {
                 }
             };
         }
-    }
-
-    
+    } 
 }
