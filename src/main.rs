@@ -885,7 +885,6 @@ fn main() {
     print_title();
     print_rules();
     let game_settings = initial_user_input();
-    println!("Mode: {} CPU-1 Diff: {} CPU-2 Diff: {}", game_settings.0, game_settings.1, game_settings.2);
 
     const MAX_STEPS: usize = 10;
     const TIME: usize = 100; 
