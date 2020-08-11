@@ -697,7 +697,7 @@ fn toggle_debug(mut debug: bool) -> bool{
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
     let start_time = Instant::now();
     
-    println!("CPU calculating {} random playouts...", max_steps);
+    println!("CPU performing {} random playouts...", max_steps);
     
     for i in 0..max_steps {
         if start_time.elapsed() > Duration::new(timer as u64, 0) { break }
@@ -848,35 +848,41 @@ fn get_max_tile(mut b: &Board, debug: bool) -> u8 {
     best_pos
 }
 
-
+/**
+*   Prompts user for game settings such as game mode and CPU difficulty.
+*   Game Modes: [1] Player VS CPU | [2] CPU VS CPU 
+*   
+*   The CPU difficulty is set based on the mode selected:
+        - if Player vs CPU is selected then only CPU-1 is set 
+        - if CPU vs CPU is selected then both CPU-1 and CPU-2 must be set 
+*/
 fn initial_user_input() -> (String, String, String) {
-
-    println!("Select a Game Mode: ");
     println!("[1] Player VS CPU");
-    println!("[2] CPU VS CPU");
-    println!("*Note: CPU VS CPU might take a while. To stop the playout use 'Ctrl' + 'C'\n");
+    println!("[2] CPU VS CPU --> This might take a while. To stop the playout use 'Ctrl' + 'C'\n");
+    println!("Select a Game Mode: ");
     let mut mode = String::new();
     let mut cpu_diff = [String::new(), String::new()];
 
     io::stdin().read_line(&mut mode).expect("Failed to read line");
     match mode.as_str().trim() {
         "1" => {
-            println!("Select CPU Difficulty: ");
             println!("[1] Easy");
             println!("[2] Hard\n");
+            println!("Select CPU Difficulty: ");
             io::stdin().read_line(&mut cpu_diff[0]).expect("Failed to read line");
         },
         "2" => {
             for i in 0..2 {
-                println!("Select CPU-{} Difficulty: ", i + 1);
                 println!("[1] Easy");
                 println!("[2] Hard\n");
+                println!("Select CPU-{} Difficulty: ", i + 1);
                 io::stdin().read_line(&mut cpu_diff[i]).expect("Failed to read line");
             }
         }
-        _ => println!("Invalid input. Expected integer 1 or 2")
+        _ => println!("Invalid input. Expected integer 1 or 2.")
     };
 
+    // Return a tuple trimming whitespace and converting to type std::string::String
     (mode.trim().to_string(), cpu_diff[0].trim().to_string(), cpu_diff[1].trim().to_string())
 }
 
@@ -893,9 +899,11 @@ fn main() {
     let height = 8;
     let mut board = Board::new(width, height);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
-    let mut debug = true;
+    let mut debug = false;
 
+    // =============
     // Player VS CPU
+    // =============
     if game_settings.0 == "1" {
         loop{
             match board.check_game_state(debug) {
@@ -969,7 +977,9 @@ fn main() {
         } // loop
     }
 
+    // ==========
     // CPU VS CPU
+    // ==========
     else {
 
         let mut start: bool = true; 
@@ -1032,7 +1042,8 @@ fn main() {
                 
             }
 
-            // Assume CPU-1 is considered player for CPU vs CPU.
+            // Assume CPU-1 is considered as "Player" for mode CPU vs CPU
+            // This will switch turns and make a turn for each CPU by calling MCTS for both with their respective difficulties
             match board.is_player_turn() {
                 true => {
                     let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.1, debug);
