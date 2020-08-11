@@ -1,6 +1,7 @@
 use std::io;
 use rand::Rng;
 use regex::Regex;
+//use math::round;
 
 // HashMap is used in order to assign a count to each element inside win/draw/loss stats
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ use std::time::{Duration, Instant};
 // Pretty board styling
 use ansi_term::Color::{Red, Green};
 use ansi_term::Style;
+
 
 struct Board {
     width: u8,
@@ -414,26 +416,15 @@ impl Board {
             // 2 cpu win
             // 3 draw            
 
-            // SUM PIECES
-            let mut count_player = 0;
-            let mut count_cpu = 0;
-
-            for i in 0..64 {
-                match self.board.get(i).unwrap() {
-                    0 => continue,
-                    1 => count_player += 1,
-                    2 => count_cpu += 1,
-                    _ => println!("Error Code: ID10T" )
-                }
-            }
+            let (player_score, cpu_score): (u8, u8) = self.get_score();
 
             if debug {
-                println!("  Player: {}, CPU: {}", Red.paint(count_player.to_string()), Green.paint(count_cpu.to_string()));
+                println!("  Player: {}, CPU: {}", Red.paint(player_score.to_string()), Green.paint(cpu_score.to_string()));
             }
             
-            if count_player > count_cpu {
+            if player_score > cpu_score {
                 return 1;
-            } else if count_cpu > count_player {
+            } else if cpu_score > player_score {
                 return 2;
             } else {
                 return 3;
@@ -443,7 +434,9 @@ impl Board {
         else { 0 }
     
     }
-
+    /**
+     * get_score() -> returns tuple containing current score for player and cpu
+     */
     fn get_score(&self) -> (u8, u8) {
         let mut count_player = 0;
         let mut count_cpu = 0;
@@ -630,15 +623,17 @@ fn convert_2d(s: &str) -> u8{
  */
 fn convert_num(num: u8) -> String {
 
-    let letter: &str = match num / 8 {
-        0 => "A",
-        1 => "B",
-        2 => "C",
-        3 => "D",
-        4 => "E",
-        5 => "F",
-        6 => "G",
-        7 => "H",
+    let val: f64 = (num / 8).into();
+
+    let letter: &str = match val.floor() {
+        0f64 => "A",
+        1f64 => "B",
+        2f64 => "C",
+        3f64 => "D",
+        4f64 => "E",
+        5f64 => "F",
+        6f64 => "G",
+        7f64 => "H",
         _ => "x"
     };
 
@@ -697,7 +692,7 @@ fn toggle_debug(mut debug: bool) -> bool{
  *      debug          -    used to print extra debug statements
  * 
  */
- fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, debug: bool) -> u8 {
+ fn monte_carlo_tree_search(mut b: &Board, max_steps: usize, timer: usize, diff: &String, debug: bool) -> u8 {
 
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
     let start_time = Instant::now();
@@ -715,7 +710,7 @@ fn toggle_debug(mut debug: bool) -> bool{
 
             let mut playout_board: Board = b.clone();
 
-            match random_playout(&mut playout_board, action, debug) {
+            match random_playout(&mut playout_board, action, diff, debug) {
                 1 => stats[1].push(action),
                 2 => stats[0].push(action),
                 3 => stats[2].push(action),
@@ -751,7 +746,7 @@ fn toggle_debug(mut debug: bool) -> bool{
 /**
 *   Performs random playouts 
 */
-fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8 {
+fn random_playout(mut b: &mut Board, action: u8, diff: &String, debug: bool) -> u8 {
     
     if debug { println!("Playing action: {}", action); }
 
@@ -762,9 +757,28 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8 {
                 if !b.player_turn { 
                     let actions = b.get_cpu_actions(debug);
                     let actions_size = actions.len();
-                    let rand_index = rand::thread_rng().gen_range(0, actions_size);
-                    let rand_val = actions.get_index(rand_index).unwrap();
-                    b.ins(*rand_val, 2, debug);
+
+                    match diff.as_str() {
+                        "1" => {
+                            let rand_index = rand::thread_rng().gen_range(0, actions_size);
+                            let rand_val = actions.get_index(rand_index).unwrap();
+                            b.ins(*rand_val, 2, debug);
+                        },
+                        
+                        "2" => {
+                            let new_val = get_max_tile(b, debug);
+
+                            if new_val == 99 {
+                                continue;
+                            }
+                                // Someone ran out of moves
+                            if debug { println!("new_val: {}", new_val); }
+                            b.ins(new_val, 2, debug);
+                        }
+                        _ => println!("How did you get here?")
+                    };
+                    
+                   
                 }
 
                 else {
@@ -786,12 +800,50 @@ fn random_playout(mut b: &mut Board, action: u8, debug: bool) -> u8 {
     }
 }
 
+/**
+ * Max Tile Heuristic - Returns the position that results in the highest
+ *                      score out of all possible actions
+ */
+fn get_max_tile(mut b: &Board, debug: bool) -> u8 {
 
-fn initial_user_input() -> (std::string::String, std::string::String, std::string::String) {
+    let actions = b.get_available_actions(debug);
+
+    if actions.len() == 0 {
+        return 99;
+    }
+
+    if debug { println!("{:?}", actions); }
+    
+    let (prev_player_score, prev_cpu_score): (u8, u8) = b.get_score();
+
+    let best_score = prev_cpu_score;
+    let mut best_pos: u8 = 0;
+
+
+    for action in actions {
+        // check increase in value of tiles
+        let mut new_board: Board = b.clone();
+        
+        new_board.ins(action, 2, debug);
+
+        let (player_score, cpu_score): (u8, u8) = new_board.get_score();
+
+        if cpu_score > best_score {
+            best_pos = action;
+        }
+        
+    }
+    
+    best_pos
+}
+
+
+fn initial_user_input() -> (String, String, String) {
 
     println!("Select a Game Mode: ");
     println!("[1] Player VS CPU");
-    println!("[2] CPU VS CPU\n");
+    println!("[2] CPU VS CPU");
+    println!("*Note: CPU VS CPU might take a while. To stop the playout use 'Ctrl' + 'C'\n");
     let mut mode = String::new();
     let mut cpu_diff = [String::new(), String::new()];
 
@@ -824,9 +876,8 @@ fn main() {
     let game_settings = initial_user_input();
     println!("Mode: {} CPU-1 Diff: {} CPU-2 Diff: {}", game_settings.0, game_settings.1, game_settings.2);
 
-
-    const MAX_STEPS: usize = 100;
-    const TIME: usize = 5;
+    const MAX_STEPS: usize = 10;
+    const TIME: usize = 100; 
 
     let width = 8;
     let height = 8;
@@ -836,80 +887,151 @@ fn main() {
 
     // Player VS CPU
     if game_settings.0 == "1" {
+        loop{
+            match board.check_game_state(debug) {
+                1 => {
+                    println!("Player has won");
+                    break;
+                },
+                2 => {
+                    println!("CPU has won");
+                    break;
+                },
+                3 => {
+                    println!("Game is a draw");
+                    break;
+                },
+                _ => ()
+            };
+    
+            board.print(true);
+    
+            if board.is_player_turn() == true {
+                println!("Place piece at position: ");
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).expect("Failed to read line");
+                
+                // Validate input string
+                match re.is_match(&input) {
+                    true => {
+                        let input_u8: u8 = convert_2d(&input);
+                        board.ins(input_u8, 1, debug);
+                    },
+    
+                    false => {
+                        match input.as_str() {
+                            "help\n" => {
+                                print_help();
+                                continue;
+                            },
+                            "actions\n" => {
+                                print_actions(board.get_player_actions(debug));
+                                continue;
+                            },
+                            "rules\n" => {
+                                print_rules();
+                                continue;
+                            }
+                            "debug\n" => {
+                                debug = toggle_debug(debug);
+                                continue;
+                            },
+                            "exit\n" => break,
+                            _ => {
+                                println!("ERROR: invalid input, enter 'help' for command information"); 
+                                continue;
+                            }
         
+                        };
+                    }
+                };
+            }
+    
+            else {
+                let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.1, debug);
+                println!("CPU found {} as best play", best_play);
+                board.ins(best_play, 2, debug);
+            }     
+    
+        } // loop
     }
 
     // CPU VS CPU
     else {
 
-    }
+        let mut start: bool = true; 
+        
+        loop {
 
-    loop{
+            match board.check_game_state(debug) {
+                1 => {
+                    println!("CPU-1 has won");
+                    break;
+                },
+                2 => {
+                    println!("CPU-2 has won");
+                    break;
+                },
+                3 => {
+                    println!("Game is a draw");
+                    break;
+                },
+                _ => ()
+            };
 
-        match board.check_game_state(debug) {
-            1 => {
-                println!("Player has won");
-                break;
-            },
-            2 => {
-                println!("CPU has won");
-                break;
-            },
-            3 => {
-                println!("Game is a draw");
-                break;
-            },
-            _ => ()
-        }
-
-        board.print(true);
-
-        if board.is_player_turn() == true {
-            println!("Place piece at position: ");
-            let mut input = String::new();
-            io::stdin().read_line(&mut input).expect("Failed to read line");
+            board.print(true);
             
-            // Validate input string
-            match re.is_match(&input) {
+            if start == true {
+                println!("PRESS ENTER TO START CPU BATTLE: ");
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).expect("Failed to read line");
+                match input.as_str() {
+                    "\n" => {
+                        start = false;
+                        continue;
+                    }
+                    "help\n" => {
+                        print_help();
+                        continue;
+                    },
+                    "actions\n" => {
+                        print_actions(board.get_player_actions(debug));
+                        continue;
+                    },
+                    "rules\n" => {
+                        print_rules();
+                        continue;
+                    }
+                    "debug\n" => {
+                        debug = toggle_debug(debug);
+                        continue;
+                    },
+                    "exit\n" => break,
+                    _ => {
+                        println!("ERROR: invalid input, enter 'help' for command information"); 
+                        continue;
+                    }
+
+                };
+                
+            }
+
+            // Assume CPU-1 is considered player for CPU vs CPU.
+            match board.is_player_turn() {
                 true => {
-                    let input_u8: u8 = convert_2d(&input);
-                    board.ins(input_u8, 1, debug);
+                    let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.1, debug);
+                    println!("CPU-1 found {} as best play", best_play);
+                    board.ins(best_play, 1, debug);    
                 },
 
                 false => {
-                    match input.as_str() {
-                        "help\n" => {
-                            print_help();
-                            continue;
-                        },
-                        "actions\n" => {
-                            print_actions(board.get_player_actions(debug));
-                            continue;
-                        },
-                        "rules\n" => {
-                            print_rules();
-                            continue;
-                        }
-                        "debug\n" => {
-                            debug = toggle_debug(debug);
-                            continue;
-                        },
-                        "exit\n" => break,
-                        _ => {
-                            println!("ERROR: invalid input, enter 'help' for command information"); 
-                            continue;
-                        }
-    
-                    };
+                    let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.2, debug);
+                    println!("CPU-2 found {} as best play", best_play);
+                    board.ins(best_play, 2, debug);    
                 }
             };
         }
+    }
 
-        else {
-            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, debug);
-            println!("CPU found {} as best play", best_play);
-            board.ins(best_play, 2, debug);
-        }     
-
-    } // loop
+    
 }
