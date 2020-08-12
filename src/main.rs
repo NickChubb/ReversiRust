@@ -90,6 +90,9 @@ impl Board {
         }
     }
 
+    /**
+     * Returns a deep copy of the board
+     */
     fn clone(&self) -> Board {
       
         let new_board: Board = Board {
@@ -154,7 +157,7 @@ impl Board {
      */
     fn ins(&mut self, pos: u8, val: u8, debug: bool) {
 
-        // add to board
+        // Add new tile to board
         let pos_u: usize = match self.get_available_actions(debug).contains(&pos) {
             false => {
                 println!("ERROR: {} is not a valid action", pos);
@@ -171,6 +174,13 @@ impl Board {
         // Manages the direction of iteration
         for direction in 0..8 {
 
+            // This part of the function iterates in all 8 directions from the tile, checking if any of
+            // the tiles in these directions will be flipped -> that is, they are...
+            //                      - adjacent to the newly placed tile, or
+            //                      - in a span of opposing tiles adjacent to the newly placed tile, and
+            //                      - has a tile on the other side of the opposing tiles that "sandwiches"
+            //                          them with no empty spaces inbetween
+
             u = 1;
             tiles.clear();
 
@@ -186,6 +196,7 @@ impl Board {
 
                 let tile = self.board.get(new_pos_usize).unwrap();
 
+                // Refer to comment above for explanation
                 if tile != &val && tile != &0 {
                     tiles.push(new_pos);
                 } else if tile == &val {
@@ -201,9 +212,11 @@ impl Board {
             }
         }
 
-        // Update perimeter
+        // Remove inserted tile from perimeter
         self.perimeter.remove(&pos);
-        
+
+        // Adds the specified spaces to perimeter IndexSet
+        // Update perimeter above
         for i in 0..3 {
             let new_pos: u8 = match pos.checked_sub(9 - i) {
                 None => continue,
@@ -215,6 +228,7 @@ impl Board {
             }
         }
         
+        // Update perimeter to the left
         match pos.checked_sub(1) {
             Some(x) => {
                 let new_pos = Some(x).unwrap();
@@ -230,6 +244,7 @@ impl Board {
             }
         };
 
+        // Update perimeter to the right
         match pos + 1 < self.board_size {
             true => {
                 let new_pos = pos + 1;
@@ -244,7 +259,8 @@ impl Board {
                }
             }
         }
-
+        
+        // Update perimeter below
         for i in 0..3 {
             let new_pos: u8 = pos + 9 - i;
             let new_pos_usize: usize = new_pos.into();
@@ -257,17 +273,20 @@ impl Board {
 
         if debug { println!("{:?}", self.perimeter); }
 
-        // update available actions
+        // Update available actions
         self.player_available_actions.remove(&pos);
         self.cpu_available_actions.remove(&pos);
 
+        // For each player 1 and 2...
         for player in 1..3 {
+            // For each tile in the perimeter
             for tile in self.get_perimeter() {
+                // Check if that tile is an available action
                 self.check_tile_actions(tile, player, debug);
             }
         }
 
-        // alternate turns
+        // Alternate turns
         if self.player_turn {
             if debug { println!("Player's turn"); }
             self.player_turn = false
@@ -312,7 +331,7 @@ impl Board {
                     // If the tile is not the same color as inserted, add to tiles vec
                     tiles.push(new_pos);
                 } else if tile == &val && tiles.len() != 0 {
-                    // If there is a tile the same color as the initial val with opposite tiles inbetween...
+                    // If there is a tile the same color as the initial val with opposing tiles inbetween...
                     if val == 1 {
                         if debug {
                             println!("Added {} to actions for Player {}", new_pos, val);
@@ -331,7 +350,7 @@ impl Board {
                 } else {
                     // Else, blank tile means not available action 
                     if debug {
-                        //println!("Removed {} from actions for player {}", pos, val);
+                        println!("Removed {} from actions for player {}", pos, val);
                     }
                     if val == 1 {
                         self.player_available_actions.remove(&pos);
@@ -389,17 +408,17 @@ impl Board {
         IndexSet::clone(&self.perimeter)
     }
 
+    // Returns: 
+    // 0 -> incomplete
+    // 1 -> player win
+    // 2 -> cpu win
+    // 3 -> draw   
     fn check_game_state(&self, debug: bool) -> u8 {
         let player_actions = self.get_player_actions();
         let cpu_actions = self.get_cpu_actions();
 
-        // GAME ENDED
-        if cpu_actions.len() == 0 || player_actions.len() == 0 {
-            
-            // 0 incomplete
-            // 1 player win
-            // 2 cpu win
-            // 3 draw            
+        // GAME IS ENDED
+        if cpu_actions.len() == 0 || player_actions.len() == 0 {         
 
             let (player_score, cpu_score): (u8, u8) = self.get_score();
 
@@ -417,8 +436,9 @@ impl Board {
         }
 
         else { 0 }
-    
+
     }
+
     /**
      * get_score() -> returns tuple containing current score for player and cpu
      */
@@ -449,13 +469,6 @@ impl Board {
         let pos_u: usize = pos.into();
         self.board.splice(pos_u..(pos_u + 1), [val].iter().cloned());
     }
-
-    fn rm(&mut self, pos: u8) {
-        let pos_u: usize = pos.into();
-        self.board.insert(pos_u, 0);
-        self.player_available_actions.insert(pos);
-    }
-    
 }
 
 /** 
