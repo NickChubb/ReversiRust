@@ -685,8 +685,13 @@ fn toggle_debug(debug: bool) -> bool {
     println!("CPU performing {} random playouts...", max_steps);
     
     for i in 0..max_steps {
+
         // Break out of function when timer is reached
-        if start_time.elapsed() > Duration::new(timer as u64, 0) { break }
+        if start_time.elapsed() >= Duration::new(timer as u64, 0) { 
+            let res: u64 =  i as u64 / start_time.elapsed().as_secs();
+            println!("Play-outs per second: {}", res);
+            break;
+        }
         
         let actions = b.get_available_actions(debug);
 
@@ -873,8 +878,9 @@ fn main() {
     print_title();
     print_rules();
     let game_settings = initial_user_input();
-    const MAX_STEPS: usize = 10;
-    const TIME: usize = 100; 
+    const MAX_STEPS: usize = 1000000;
+    const TIME: usize = 5; 
+    let start_time = Instant::now();
     let width = 8;
     let height = 8;
     let mut board = Board::new(width, height);
@@ -961,7 +967,7 @@ fn main() {
     else {
 
         let mut start: bool = true; 
-        
+
         loop {
 
             match board.check_game_state(debug) {
@@ -992,6 +998,7 @@ fn main() {
                 match input.as_str() {
                     "\n" => {
                         start = false;
+                        let start_time = Instant::now();
                         continue;
                     }
                     "help\n" => {
