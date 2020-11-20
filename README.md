@@ -6,5 +6,10 @@ A rust implementation of a Reversi (Othello) game!  The AI is implemented with a
 
 ## Installation
 
-`$ cargo install reversi`
-`$ reversi`
+```sh
+$ cargo install reversi
+```
+
+```sh
+$ reversi # to start a new game
+```
