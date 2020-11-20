@@ -4,6 +4,7 @@ A rust implementation of a Reversi (Othello) game!  The AI is implemented with a
 
 ![Game Play Example](./game_example.gif)
 
-To Run:
+## Installation
 
-./reversi_mcts
+`$ cargo install reversi`
+`$ reversi`
