@@ -1,5 +1,5 @@
 # Reversi Monte-Carlo Search Tree Solver
 
-Implemented with the Rust (or Go) language.
+To Run:
 
-Created for CMPT310
+./reversi_mcts
