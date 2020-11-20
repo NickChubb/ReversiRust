@@ -17,7 +17,19 @@ use std::time::{Duration, Instant};
 use ansi_term::Color::{Red, Green};
 use ansi_term::Style;
 
-
+/** 
+ * Game Board Struct
+ * 
+ * Manages the board vector and the information about it, including...
+ *      - perimeter tiles
+ *      - whether it is the players turn
+ *      - available actions for both player and cpu
+ * 
+ * Board.board elements are u8 integers, which represent:
+ *      0 => Empty Square
+ *      1 => Player
+ *      2 => CPU
+*/
 struct Board {
     width: u8,
     height: u8,
@@ -37,10 +49,6 @@ impl Board {
     /**
      * Initializes a Reversi game board
      * 
-     * board elements are u8 integers, which represent:
-     *      0 => Empty Square
-     *      1 => Player
-     *      2 => CPU
      */
     fn new(w: u8, h: u8) -> Board {
 
@@ -91,7 +99,7 @@ impl Board {
     }
 
     /**
-     * Returns a deep copy of the board
+     * 
      */
     fn clone(&self) -> Board {
       
@@ -623,16 +631,19 @@ fn convert_num(num: u8) -> String {
 
     let val: f64 = (num / 8).into();
 
-    let letter: &str = match val.floor() {
-        0f64 => "A",
-        1f64 => "B",
-        2f64 => "C",
-        3f64 => "D",
-        4f64 => "E",
-        5f64 => "F",
-        6f64 => "G",
-        7f64 => "H",
-        _ => "x"
+    let letter: &str = match val.floor() as u8 {
+        0 => "A",
+        1 => "B",
+        2 => "C",
+        3 => "D",
+        4 => "E",
+        5 => "F",
+        6 => "G",
+        7 => "H",
+        _ => {
+            println!("ERROR convert_num() -> input too large");
+            "ERR"
+        }
     };
 
     format!("{}{}", letter, num % 8 + 1)
@@ -791,7 +802,7 @@ fn random_playout(b: &mut Board, action: u8, diff: &String, debug: bool) -> u8 {
                             if debug { println!("new_val: {}", new_val); }
                             b.ins(new_val, 2, debug);
                         }
-                        _ => println!("How did you get here?")
+                        _ => println!("ERROR in random_playout() -> diff variable invalid: {}", diff)
                     };
                 }
 
@@ -866,16 +877,16 @@ fn initial_user_input() -> (String, String, String) {
     io::stdin().read_line(&mut mode).expect("Failed to read line");
     match mode.as_str().trim() {
         "1" => {
-            println!("[1] Easy");
+            println!("\n[1] Easy");
             println!("[2] Hard\n");
-            println!("Select CPU Difficulty: ");
+            println!("Select CPU Difficulty (1, 2): ");
             io::stdin().read_line(&mut cpu_diff[0]).expect("Failed to read line");
         },
         "2" => {
             for i in 0..2 {
-                println!("[1] Easy");
+                println!("\n[1] Easy");
                 println!("[2] Hard\n");
-                println!("Select CPU-{} Difficulty: ", i + 1);
+                println!("Select CPU-{} Difficulty (1, 2): ", i + 1);
                 io::stdin().read_line(&mut cpu_diff[i]).expect("Failed to read line");
             }
         }
@@ -888,15 +899,17 @@ fn initial_user_input() -> (String, String, String) {
 
 
 fn main() {
+
+    const MAX_STEPS: usize = 1000;
+    const TIME: usize = 5; 
+    const WIDTH: u8 = 8;
+    const HEIGHT: u8 = 8;
+
     print_title();
     print_rules();
+
     let game_settings = initial_user_input();
-    const MAX_STEPS: usize = 1000000;
-    const TIME: usize = 5; 
-    let start_time = Instant::now();
-    let width = 8;
-    let height = 8;
-    let mut board = Board::new(width, height);
+    let mut board = Board::new(WIDTH, HEIGHT);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
     let mut debug = false;
 
