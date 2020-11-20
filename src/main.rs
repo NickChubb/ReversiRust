@@ -1,4 +1,6 @@
 use std::io;
+use std::io::stdout;
+use std::io::Write; 
 use rand::Rng;
 use regex::Regex;
 
@@ -706,14 +708,17 @@ fn toggle_debug(debug: bool) -> bool {
     let mut stats: [Vec<u8>; 3] = [vec![], vec![], vec![]];
     let start_time = Instant::now();
     
-    println!("CPU performing {} random playouts...", max_steps);
+    if debug { println!("CPU performing {} random playouts...", max_steps); }
     
     for i in 0..max_steps {
+
+        if !debug { print!("."); stdout().flush(); }
+        if (i + 1) % 30 == 0 { println!() }
 
         // Break out of function when timer is reached
         if start_time.elapsed() >= Duration::new(timer as u64, 0) { 
             let res: u64 =  i as u64 / start_time.elapsed().as_secs();
-            println!("Play-outs per second: {}", res);
+            if debug { println!("Play-outs per second: {}", res); }
             break;
         }
         
@@ -859,45 +864,6 @@ fn get_max_tile(b: &Board, debug: bool) -> u8 {
     best_pos
 }
 
-/**
-*   Prompts user for game settings such as game mode and CPU difficulty.
-*   Game Modes: [1] Player VS CPU | [2] CPU VS CPU 
-*   
-*   The CPU difficulty is set based on the mode selected:
-        - if Player vs CPU is selected then only CPU-1 is set 
-        - if CPU vs CPU is selected then both CPU-1 and CPU-2 must be set 
-*/
-fn initial_user_input() -> (String, String, String) {
-    println!("[1] Player VS CPU");
-    println!("[2] CPU VS CPU --> This might take a while. To stop the playout use 'Ctrl' + 'C'\n");
-    println!("Select a Game Mode: ");
-    let mut mode = String::new();
-    let mut cpu_diff = [String::new(), String::new()];
-
-    io::stdin().read_line(&mut mode).expect("Failed to read line");
-    match mode.as_str().trim() {
-        "1" => {
-            println!("\n[1] Easy");
-            println!("[2] Hard\n");
-            println!("Select CPU Difficulty (1, 2): ");
-            io::stdin().read_line(&mut cpu_diff[0]).expect("Failed to read line");
-        },
-        "2" => {
-            for i in 0..2 {
-                println!("\n[1] Easy");
-                println!("[2] Hard\n");
-                println!("Select CPU-{} Difficulty (1, 2): ", i + 1);
-                io::stdin().read_line(&mut cpu_diff[i]).expect("Failed to read line");
-            }
-        }
-        _ => println!("Invalid input. Expected integer 1 or 2.")
-    };
-
-    // Return a tuple trimming whitespace and converting to type std::string::String
-    (mode.trim().to_string(), cpu_diff[0].trim().to_string(), cpu_diff[1].trim().to_string())
-}
-
-
 fn main() {
 
     const MAX_STEPS: usize = 1000;
@@ -908,7 +874,33 @@ fn main() {
     print_title();
     print_rules();
 
-    let game_settings = initial_user_input();
+    let mut cpu_diff = String::new();
+
+    // Get difficulty
+    loop {
+        println!("\n[1] Easy");
+        println!("[2] Hard\n");
+        println!("Select CPU Difficulty (1, 2): ");
+        io::stdin().read_line(&mut cpu_diff).expect("Failed to read line");
+
+        let difficulty: String = match cpu_diff.trim().to_string().as_str() {
+            "1" => {
+                cpu_diff.trim().to_string()
+            },
+            "2" => {
+                cpu_diff.trim().to_string()
+            },
+            _ => {
+                println!("ERROR: Invalid entry");
+                cpu_diff = String::new();
+                continue;
+            }
+        };
+
+        break;
+    } 
+
+    let difficulty = cpu_diff.trim().to_string();
     let mut board = Board::new(WIDTH, HEIGHT);
     let re = Regex::new(r"([aA-hH][1-8])").unwrap();
     let mut debug = false;
@@ -916,155 +908,70 @@ fn main() {
     // =============
     // Player VS CPU
     // =============
-    if game_settings.0 == "1" {
-        loop {
-            match board.check_game_state(debug) {
-                1 => {
-                    println!("Player has won");
-                    board.print(debug);
-                    break;
-                },
-                2 => {
-                    println!("CPU has won");
-                    board.print(debug);
-                    break;
-                },
-                3 => {
-                    println!("Game is a draw");
-                    board.print(debug);
-                    break;
-                },
-                _ => ()
-            };
-    
-            board.print(true);
-    
-            if board.is_player_turn() == true {
-                println!("Place piece at position: ");
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).expect("Failed to read line");
-                
-                // Validate input string
-                match re.is_match(&input) {
-                    true => {
-                        let input_u8: u8 = convert_2d(&input);
-                        board.ins(input_u8, 1, debug);
-                    },
-                    false => {
-                        match input.as_str() {
-                            "help\n" => {
-                                print_help();
-                                continue;
-                            },
-                            "actions\n" => {
-                                print_actions(board.get_player_actions());
-                                continue;
-                            },
-                            "rules\n" => {
-                                print_rules();
-                                continue;
-                            }
-                            "debug\n" => {
-                                debug = toggle_debug(debug);
-                                continue;
-                            },
-                            "exit\n" => break,
-                            _ => {
-                                println!("ERROR: invalid input, enter 'help' for command information"); 
-                                continue;
-                            }
-        
-                        };
-                    }
-                };
-            }
-    
-            else {
-                let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.1, debug);
-                println!("CPU found {} as best play", best_play);
-                board.ins(best_play, 2, debug);
-            }     
-        } 
-    }
+    loop {
+        match board.check_game_state(debug) {
+            1 => {
+                println!("Player has won");
+                board.print(debug);
+                break;
+            },
+            2 => {
+                println!("CPU has won");
+                board.print(debug);
+                break;
+            },
+            3 => {
+                println!("Game is a draw");
+                board.print(debug);
+                break;
+            },
+            _ => ()
+        };
 
-    // ==========
-    // CPU VS CPU
-    // ==========
-    else {
+        board.print(true);
 
-        let mut start: bool = true; 
-
-        loop {
-
-            match board.check_game_state(debug) {
-                1 => {
-                    println!("CPU-1 has won");
-                    board.print(debug);
-                    break;
-                },
-                2 => {
-                    println!("CPU-2 has won");
-                    board.print(debug);
-                    break;
-                },
-                3 => {
-                    println!("Game is a draw");
-                    board.print(debug);
-                    break;
-                },
-                _ => ()
-            };
-
-            board.print(debug);
+        if board.is_player_turn() == true {
+            println!("Place piece at position: ");
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).expect("Failed to read line");
             
-            if start == true {
-                println!("PRESS ENTER TO START CPU BATTLE: ");
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).expect("Failed to read line");
-                match input.as_str() {
-                    "\n" => {
-                        start = false;
-                        let start_time = Instant::now();
-                        continue;
-                    }
-                    "help\n" => {
-                        print_help();
-                        continue;
-                    },
-                    "actions\n" => {
-                        print_actions(board.get_player_actions());
-                        continue;
-                    },
-                    "rules\n" => {
-                        print_rules();
-                        continue;
-                    }
-                    "debug\n" => {
-                        debug = toggle_debug(debug);
-                        continue;
-                    },
-                    "exit\n" => break,
-                    _ => {
-                        println!("ERROR: invalid input, enter 'help' for command information"); 
-                        continue;
-                    }
-                };
-            }
-
-            // Assume CPU-1 is considered as "Player" for mode CPU vs CPU
-            // This will switch turns and make a turn for each CPU by calling MCTS for both with their respective difficulties
-            match board.is_player_turn() {
+            // Validate input string
+            match re.is_match(&input) {
                 true => {
-                    let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.1, debug);
-                    println!("CPU-1 found {} as best play", best_play);
-                    board.ins(best_play, 1, debug);    
+                    let input_u8: u8 = convert_2d(&input);
+                    board.ins(input_u8, 1, debug);
                 },
                 false => {
-                    let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &game_settings.2, debug);
-                    println!("CPU-2 found {} as best play", best_play);
-                    board.ins(best_play, 2, debug);    
+                    match input.as_str() {
+                        "help\n" => {
+                            print_help();
+                            continue;
+                        },
+                        "actions\n" => {
+                            print_actions(board.get_player_actions());
+                            continue;
+                        },
+                        "rules\n" => {
+                            print_rules();
+                            continue;
+                        }
+                        "debug\n" => {
+                            debug = toggle_debug(debug);
+                            continue;
+                        },
+                        "exit\n" => break,
+                        _ => {
+                            println!("ERROR: invalid input, enter 'help' for command information"); 
+                            continue;
+                        }
+    
+                    };
                 }
             };
-        }
-    } 
+        } else {
+            let best_play: u8 = monte_carlo_tree_search(&board, MAX_STEPS, TIME, &difficulty, debug);
+            println!("\n\nCPU found {} as best play", convert_num(best_play));
+            board.ins(best_play, 2, debug);
+        }     
+    }   
 }
